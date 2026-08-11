@@ -174,7 +174,7 @@ export function DeviceLab() {
 
       <Card
         title="해상도 – 측정시간 트레이드오프"
-        sub="CD4067은 한 번에 한 채널만 연다. 셀이 늘면 ADC 변환도 그대로 늘어난다."
+        sub={`CD4067은 한 번에 한 채널만 연다. 셀이 늘면 ADC 변환도 그대로 늘어난다. 표는 정사각 N×N 기준이라 8×8 행은 64칸이고, 현재 운전점은 원형 마스크로 ${est.cellCount}칸이라 ${est.totalMs.toFixed(1)} ms다.`}
       >
         <LineChart
           points={points}
@@ -204,7 +204,12 @@ export function DeviceLab() {
                 <tr key={p.label} style={{ fontWeight: p.current ? 600 : 400 }}>
                   <td>
                     {p.label}
-                    {p.current && <span style={{ color: 'var(--series-1)' }}> ← 현재</span>}
+                    {p.current && (
+                      <span style={{ color: 'var(--series-1)' }}>
+                        {' '}
+                        ← 현재{circleMask ? ` (마스크 적용 시 ${est.cellCount}칸 · ${est.totalMs.toFixed(1)} ms)` : ''}
+                      </span>
+                    )}
                   </td>
                   <td className="num">{p.cellCount}</td>
                   <td className="num">{p.muxCount}</td>
@@ -219,10 +224,11 @@ export function DeviceLab() {
         </div>
 
         <p className="section-note" style={{ marginTop: 10 }}>
-          현재 8×8은 프레임당 {est.totalMs.toFixed(1)} ms, CD4067 {MUX_COUNT}개다. 흔히 쓰는 52×52 웨이퍼맵 해상도로 가면
-          같은 방식으로 CD4067이 {curve[curve.length - 1].muxCount}개 필요하고 프레임은{' '}
-          {(curve[curve.length - 1].totalMs / est.totalMs).toFixed(0)}배로 늘어난다. 해상도와 측정 시간이 트레이드오프
-          관계라는 게 이 표의 숫자다 — 저해상도 선택은 성능 타협이 아니라 "빠른 1차 스크리닝"이라는 목적에 맞춘 설계다.
+          현재 구성은 측정 셀 {est.cellCount}칸에 프레임당 {est.totalMs.toFixed(1)} ms, CD4067 {MUX_COUNT}개다. 흔히 쓰는
+          52×52 웨이퍼맵 해상도로 가면 같은 방식으로 CD4067이 {curve[curve.length - 1].muxCount}개 필요하고, 정사각 기준
+          8×8 대비 프레임이 {(curve[curve.length - 1].totalMs / curve[1].totalMs).toFixed(0)}배로 늘어난다. 해상도와 측정
+          시간이 트레이드오프 관계라는 게 이 표의 숫자다 — 저해상도 선택은 성능 타협이 아니라 "빠른 1차 스크리닝"이라는
+          목적에 맞춘 설계다.
         </p>
       </Card>
 
