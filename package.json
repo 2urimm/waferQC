@@ -1,0 +1,25 @@
+{
+  "name": "waferqc",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "저해상도(64칸) 웨이퍼 결함 스크리닝 플랫폼 프로토타입 - 공정 엔지니어용 원인 추적 UI",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "verify": "node -e \"require('esbuild').buildSync({entryPoints:['scripts/verify-presets.ts'],bundle:true,platform:'node',format:'cjs',outfile:'node_modules/.cache/verify.cjs',logLevel:'error'})\" && node node_modules/.cache/verify.cjs"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0"
+  }
+}
