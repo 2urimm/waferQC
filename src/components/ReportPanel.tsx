@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
 import { generateReport } from '../services/report';
+import { renderReportPng } from '../services/reportImage';
 import { CLASSIFICATION_META, type User } from '../services/security';
 import { Badge, Card } from './ui';
 
@@ -24,13 +25,44 @@ export function ReportPanel({
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pngUrl, setPngUrl] = useState<string | null>(null);
+  const [rendering, setRendering] = useState(false);
 
   const report = useMemo(
     () => generateReport({ inspection, plan, user }),
     [inspection, plan, user],
   );
 
+  // 판정이나 권한이 바뀌면 이전 미리보기는 더 이상 맞지 않는다
+  useEffect(() => {
+    setPngUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, [inspection.id, user.id]);
+
+  useEffect(() => () => { if (pngUrl) URL.revokeObjectURL(pngUrl); }, [pngUrl]);
+
   const cls = CLASSIFICATION_META[report.classification];
+
+  const savePng = async () => {
+    setRendering(true);
+    try {
+      const img = await renderReportPng({ inspection, plan, user });
+      const url = URL.createObjectURL(img.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${img.title}.png`;
+      a.click();
+      setPngUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+      onAudit('export-report', `${img.title}.png`, img.classification);
+    } finally {
+      setRendering(false);
+    }
+  };
 
   const download = () => {
     const blob = new Blob([report.markdown], { type: 'text/markdown;charset=utf-8' });
@@ -63,8 +95,11 @@ export function ReportPanel({
           <button className="btn btn-sm" onClick={copy}>
             {copied ? '복사됨' : '복사'}
           </button>
-          <button className="btn btn-sm btn-primary" onClick={download}>
+          <button className="btn btn-sm" onClick={download}>
             .md 저장
+          </button>
+          <button className="btn btn-sm btn-primary" onClick={savePng} disabled={rendering}>
+            {rendering ? '만드는 중…' : 'PNG 저장'}
           </button>
         </>
       }
@@ -92,6 +127,25 @@ export function ReportPanel({
           )}
         </div>
       </div>
+
+      {pngUrl && (
+        <div style={{ marginTop: 12 }}>
+          <div className="card-sub" style={{ marginBottom: 6 }}>
+            저장한 PNG — 한 장으로 읽히게 만든 버전이라 마크다운보다 항목이 간추려져 있다 (공정 상위 3개).
+          </div>
+          <img
+            src={pngUrl}
+            alt="점검 보고서 이미지"
+            style={{
+              width: '100%',
+              maxWidth: 620,
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'block',
+            }}
+          />
+        </div>
+      )}
 
       {open && (
         <pre className="protocol" style={{ marginTop: 12, maxHeight: 460, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
