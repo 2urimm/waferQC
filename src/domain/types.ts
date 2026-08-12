@@ -137,13 +137,35 @@ export interface Verdict {
   engine: 'rule-mock' | 'model';
   engineVersion: string;
   inferMs: number;
-  /** 보조 모델(V3) 결과 — 실제 모델 연결 시 채워진다 */
-  auxiliary?: {
-    used: boolean;
-    binaryDefectScore: number | null;
-    prediction: DefectPatternId | null;
-    score: number | null;
-  };
+  /** 실제 모델(WaferCNNV2 + V3)이 낸 값 — 규칙 대체판에는 없다 */
+  model?: ModelOutput;
+}
+
+/**
+ * 실제 모델 서버가 돌려주는 것들.
+ * 규칙 대체판이 흉내 낼 수 없는 값이라 별도 블록으로 둔다 — 있으면 실제 모델,
+ * 없으면 대체판이라는 게 타입만 봐도 드러나야 한다.
+ */
+export interface ModelOutput {
+  /** 모델 정책의 최종 판단 */
+  status: 'ACCEPT' | 'REVIEW';
+  /** 1순위 클래스에 적용된 임계값. 1.01이면 확률이 넘을 수 없어 항상 REVIEW다. */
+  classThreshold: number;
+  /** 보조 모델 V3 */
+  auxiliaryPrediction: DefectPatternId | null;
+  auxiliaryScore: number | null;
+  v3DefectScore: number | null;
+  v3BinaryThreshold: number | null;
+  /** 불량으로 판정된 칸 수 (모델이 직접 센 값) */
+  defectCellCount: number;
+  /**
+   * 사분면 방향 — Scratch / Loc / Edge-Loc 에만 나온다.
+   * row 0 = 위, col 0 = 왼쪽 기준이며, 하드웨어 배선이 반전돼 있으면 반대로 나온다.
+   */
+  direction: string | null;
+  directionConfidence: number | null;
+  directionMethod: string | null;
+  quadrantCounts: Record<string, number> | null;
 }
 
 export interface FeatureDriver {

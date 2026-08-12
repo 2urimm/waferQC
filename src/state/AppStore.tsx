@@ -15,7 +15,14 @@ import type { CellState } from '../config/model';
 import { blankWafer, buildPreset } from '../domain/patterns';
 import type { Inspection, ScanFrame, ScanProgress, Verdict, WaferMap } from '../domain/types';
 import { createDeviceLink, type DeviceLink, type LinkState } from '../services/deviceLink';
-import { getInferenceEngine } from '../services/inference';
+import {
+  DEFAULT_MODEL_SERVER,
+  HttpInferenceEngine,
+  RuleInferenceEngine,
+  getInferenceEngine,
+  probeModelServer,
+  setInferenceEngine,
+} from '../services/inference';
 import { loadHistory, resetHistory, saveInspection, updateInspection } from '../services/history';
 import { DEMO_USERS, readAudit, recordAudit, type AuditEvent, type AuditAction, type Classification, type User } from '../services/security';
 
@@ -56,6 +63,12 @@ interface State {
 
   user: User;
   auditLog: AuditEvent[];
+
+  /** 'rule' = 규칙 대체판, 'model' = 실제 WaferCNNV2 서버 */
+  engineKind: 'rule' | 'model';
+  modelServerUrl: string;
+  modelServerStatus: 'unknown' | 'checking' | 'up' | 'down';
+  modelServerDetail: string;
 }
 
 const idleProgress: ScanProgress = { phase: 'idle', read: 0, total: CELL_COUNT, message: '대기' };
@@ -85,6 +98,10 @@ const initialState: State = {
   selectedInspectionId: null,
   user: DEMO_USERS[0],
   auditLog: [],
+  engineKind: 'rule',
+  modelServerUrl: DEFAULT_MODEL_SERVER,
+  modelServerStatus: 'unknown',
+  modelServerDetail: '',
 };
 
 type Action =
@@ -150,6 +167,9 @@ interface Store {
   /** 공정을 바꾸면 그 공정의 주 진단지표와 기본 스펙으로 같이 옮겨간다 */
   setProcess: (process: ProcessId) => void;
   setMetric: (metricId: MetricId) => void;
+  /** 실제 모델 서버로 전환 (서버가 살아 있을 때만 성공) */
+  useModelEngine: (url: string) => Promise<void>;
+  useRuleEngine: () => void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -203,6 +223,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [patch],
   );
+
+  // 실제 모델 서버로 갈아탄다. 살아 있는지 먼저 확인하고 바꾼다 —
+  // 죽은 서버로 바꿔 놓으면 스캔할 때마다 실패하고 원인을 찾기 어렵다.
+  const useModelEngine = useCallback(
+    async (url: string) => {
+      patch({ modelServerStatus: 'checking', modelServerUrl: url, linkError: null });
+      const probe = await probeModelServer(url);
+      if (!probe.ok) {
+        patch({ modelServerStatus: 'down', modelServerDetail: probe.detail });
+        return;
+      }
+      setInferenceEngine(new HttpInferenceEngine(url));
+      patch({ engineKind: 'model', modelServerStatus: 'up', modelServerDetail: probe.detail });
+    },
+    [patch],
+  );
+
+  const useRuleEngine = useCallback(() => {
+    setInferenceEngine(new RuleInferenceEngine());
+    patch({ engineKind: 'rule' });
+  }, [patch]);
 
   const setMetric = useCallback(
     (metricId: MetricId) => patch({ metricId, spec: defaultSpec(METRICS[metricId]), frame: null, verdict: null }),
@@ -342,6 +383,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logAudit,
       setProcess,
       setMetric,
+      useModelEngine,
+      useRuleEngine,
     }),
     [
       state,
@@ -362,6 +405,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logAudit,
       setProcess,
       setMetric,
+      useModelEngine,
+      useRuleEngine,
     ],
   );
 

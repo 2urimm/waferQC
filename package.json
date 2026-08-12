@@ -11,6 +11,7 @@
     "typecheck": "tsc -b --noEmit",
     "verify": "npm run verify:presets && npm run verify:measure",
     "verify:presets": "node -e \"require('esbuild').buildSync({entryPoints:['scripts/verify-presets.ts'],bundle:true,platform:'node',format:'cjs',outfile:'node_modules/.cache/verify.cjs',logLevel:'error'})\" && node node_modules/.cache/verify.cjs",
+    "verify:model": "node -e \"require('esbuild').buildSync({entryPoints:['scripts/verify-model-server.ts'],bundle:true,platform:'node',format:'cjs',outfile:'node_modules/.cache/vms.cjs',logLevel:'error'})\" && node node_modules/.cache/vms.cjs",
     "verify:measure": "node -e \"require('esbuild').buildSync({entryPoints:['scripts/verify-measurement.ts'],bundle:true,platform:'node',format:'cjs',outfile:'node_modules/.cache/vm.cjs',logLevel:'error'})\" && node node_modules/.cache/vm.cjs"
   },
   "dependencies": {

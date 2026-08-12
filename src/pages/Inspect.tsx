@@ -13,7 +13,7 @@ import {
   type MetricId,
 } from '../domain/metrology';
 import { buildPlan } from '../domain/plan';
-import { PATTERN_PRESETS } from '../domain/patterns';
+import { PATTERN_PRESETS, README_EXAMPLES } from '../domain/patterns';
 import { currentEstimate } from '../domain/scan';
 import { ProcessTabs } from '../components/ProcessTabs';
 import { ReportPanel } from '../components/ReportPanel';
@@ -110,6 +110,30 @@ export function Inspect() {
             <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
               프리셋은 정답을 외운 데모가 아니라 비교 기준이다. 직접 그린 임의 패턴도 같은 경로로 처리된다 —
               그게 이 시스템이 실제로 동작한다는 증거다.
+            </p>
+
+            <div className="divider" style={{ margin: '12px 0' }} />
+
+            <div className="card-sub" style={{ marginBottom: 6 }}>
+              모델 패키지 예시 입력 (README)
+            </div>
+            <div className="row" style={{ gap: 5 }}>
+              {README_EXAMPLES.map((ex) => (
+                <button
+                  key={ex.id}
+                  className="btn btn-sm"
+                  disabled={scanning}
+                  onClick={() => applyPreset(ex.id)}
+                  title={`README의 ${ex.label} — 불량 ${ex.defectCells}칸. python app.py --manual 과 같은 입력이다.`}
+                >
+                  {ex.label}
+                </button>
+              ))}
+            </div>
+            <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
+              팀이 실제 모델을 검증할 때 쓰는 입력을 값 그대로 옮겨 왔다. 실제 모델 서버에 연결한 뒤 이걸 돌리면
+              <code className="mono"> python app.py --manual</code> 과 같은 판정이 나와야 한다 — 다르면 UI가 뭔가 잘못
+              보내고 있다는 뜻이다.
             </p>
           </Card>
 

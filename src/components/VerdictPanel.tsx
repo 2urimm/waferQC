@@ -103,9 +103,117 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         </div>
       </Card>
 
+      {verdict.model && (
+        <Card
+          title="모델 출력"
+          sub="실제 WaferCNNV2 + V3가 낸 값. UI가 다시 계산하지 않고 그대로 표시한다."
+        >
+          <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+            <Badge color={verdict.model.status === 'ACCEPT' ? '--good' : '--warning'} strong>
+              {verdict.model.status}
+            </Badge>
+            <Badge>불량 {verdict.model.defectCellCount}칸</Badge>
+            {verdict.model.direction && (
+              <Badge strong>
+                방향 {verdict.model.direction}
+                {verdict.model.directionConfidence !== null &&
+                  ` ${(verdict.model.directionConfidence * 100).toFixed(0)}%`}
+              </Badge>
+            )}
+          </div>
+
+          <dl className="kv">
+            <dt>클래스 임계</dt>
+            <dd>
+              {verdict.model.classThreshold.toFixed(2)}
+              {verdict.model.classThreshold > 1 && (
+                <span style={{ color: 'var(--serious)' }}>
+                  {' '}
+                  — 확률이 넘을 수 없는 값이라 이 클래스는 항상 검토 대상이다
+                </span>
+              )}
+            </dd>
+            {verdict.model.auxiliaryPrediction && (
+              <>
+                <dt>보조 모델 V3</dt>
+                <dd>
+                  {PATTERN_LABEL[verdict.model.auxiliaryPrediction]} ({verdict.model.auxiliaryPrediction})
+                  {verdict.model.auxiliaryScore !== null && ` ${pct(verdict.model.auxiliaryScore)}`}
+                  {verdict.model.auxiliaryPrediction !== verdict.top && (
+                    <span style={{ color: 'var(--serious)' }}> — 주 모델과 다름</span>
+                  )}
+                </dd>
+              </>
+            )}
+            {verdict.model.v3DefectScore !== null && (
+              <>
+                <dt>V3 불량 점수</dt>
+                <dd>
+                  {verdict.model.v3DefectScore.toFixed(3)}
+                  {verdict.model.v3BinaryThreshold !== null && ` / 임계 ${verdict.model.v3BinaryThreshold.toFixed(2)}`}
+                </dd>
+              </>
+            )}
+          </dl>
+
+          {verdict.model.quadrantCounts && (
+            <>
+              <div className="divider" style={{ margin: '12px 0' }} />
+              <div className="card-sub" style={{ marginBottom: 6 }}>
+                사분면 불량 분포 — {verdict.model.directionMethod === 'centroid_tiebreak' ? '동점이라 무게중심으로 결정' : '최다 사분면'}
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 4,
+                  maxWidth: 220,
+                  fontSize: 12.5,
+                }}
+              >
+                {(
+                  [
+                    ['top_left', '왼쪽 위'],
+                    ['top_right', '오른쪽 위'],
+                    ['bottom_left', '왼쪽 아래'],
+                    ['bottom_right', '오른쪽 아래'],
+                  ] as const
+                ).map(([key, label]) => {
+                  const n = verdict.model!.quadrantCounts![key] ?? 0;
+                  const isMax = n > 0 && n === Math.max(...Object.values(verdict.model!.quadrantCounts!));
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: isMax ? 'var(--series-1)' : 'var(--surface-sunken)',
+                        color: isMax ? '#fff' : 'var(--text-secondary)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      <div style={{ fontSize: 11, opacity: 0.85 }}>{label}</div>
+                      <div style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{n}칸</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
+                row 0 = 위, col 0 = 왼쪽 기준이다. 하드웨어 배선이 상하/좌우 반전돼 있으면 방향도 반대로 나오므로,
+                조립 후 한 모서리에만 불량을 넣어 좌표 방향을 한 번 검증할 것.
+              </p>
+            </>
+          )}
+        </Card>
+      )}
+
       <Card
         title="9클래스 확률"
-        sub="모델이 내는 원본 확률. 위의 계통 확률은 이걸 묶은 것이라 합이 보존된다."
+        sub={
+          verdict.model
+            ? '모델이 내는 원본 확률. 위의 계통 확률은 이걸 묶은 것이라 합이 보존된다.'
+            : '규칙 대체판이 만든 확률. 학습된 모델이 아니라 UI를 돌리기 위한 임시 값이다.'
+        }
       >
         <div className="stack" style={{ gap: 10 }}>
           {verdict.patterns.map((p) => (

@@ -36,43 +36,52 @@ export class RuleInferenceEngine implements InferenceEngine {
 }
 
 /**
- * 노트북 `predict_final_wafer()`의 응답 형태.
- * 서버는 이 함수를 그대로 감싸 내보내면 된다 — 필드명을 노트북과 같게 맞춰 뒀다.
+ * 실제 추론 서버(wafer_final_package/serve.py)의 응답.
+ * 필드명은 wafer_model.py의 `WaferInferenceSystem.predict()` 반환값 그대로다 —
+ * 서버는 그걸 감싸기만 하고 이름을 바꾸지 않는다.
  */
 export interface PredictResponse {
-  /** 9클래스 확률. CLASS_NAMES와 같은 순서여야 한다. */
+  prediction: DefectPatternId;
+  score: number;
+  status: 'ACCEPT' | 'REVIEW';
+  review_reason: string[];
+  class_threshold: number;
+  none_review_threshold: number;
+  top_predictions: Array<{ class: DefectPatternId; score: number }>;
+  auxiliary_prediction: DefectPatternId | null;
+  auxiliary_score: number | null;
+  v3_defect_score: number | null;
+  v3_binary_threshold: number | null;
+  defect_cell_count: number;
+  direction: string | null;
+  direction_confidence: number | null;
+  quadrant_counts: Record<string, number> | null;
+  direction_method: string | null;
+  /** serve.py가 덧붙이는 것 — 클래스 순서대로 정렬한 9개 확률 */
   probabilities?: number[];
-  final_prediction: DefectPatternId;
-  final_score: number;
-  primary_model: string;
-  v2_top_predictions?: Array<{ class: DefectPatternId; score: number }>;
-  auxiliary_used?: boolean;
-  v3_binary_defect_score?: number | null;
-  v3_auxiliary_prediction?: DefectPatternId | null;
-  v3_auxiliary_score?: number | null;
-  needs_review?: boolean;
-  review_reasons?: string[];
-  defect_cell_count?: number;
+  class_names?: string[];
+  model?: string;
 }
 
 /**
- * 모델 서버 어댑터.
+ * 실제 모델 서버 어댑터.
  *
- * 기대 계약:
  *   POST {baseUrl}/predict
- *   요청  { "hardware_map": number[8][8] }   // 값은 0(웨이퍼 밖) / 1(정상 die) / 2(불량 die)
- *   응답  PredictResponse (위 인터페이스)
+ *   요청  { "hardware_map": number[8][8] }   // 0(웨이퍼 밖) / 1(정상 die) / 2(불량 die)
+ *   응답  PredictResponse
  *
- * 서버가 `probabilities`를 주면 그대로 쓰고, `v2_top_predictions`만 주면 상위 k개로
- * 성긴 분포를 만들어 쓴다. 후자의 경우 나머지 클래스 확률은 0으로 두므로 계통 합이
- * 실제보다 낮게 나올 수 있다 — 가능하면 서버가 9개 전부를 내려주게 할 것.
+ * 서버 띄우는 법은 wafer_final_package/serve.py 주석 참고.
+ *
+ * 판정·검토 여부는 전부 서버 값을 그대로 쓴다. UI가 다시 계산하지 않는다 —
+ * 모델 정책(클래스별 임계, V3 대조)이 UI 규칙보다 정본이고, 두 곳에서 따로 계산하면
+ * 언젠가 어긋난다. UI가 채우는 건 피처·근거·계통 집계처럼 맵에서 순수하게 나오는 것뿐이다.
  */
 export class HttpInferenceEngine implements InferenceEngine {
   readonly kind = 'http' as const;
   readonly label: string;
 
   constructor(private baseUrl: string) {
-    this.label = `모델 서버 (${baseUrl})`;
+    this.label = `실제 모델 서버 (${baseUrl})`;
   }
 
   async predict(map: WaferMap): Promise<Verdict> {
@@ -87,28 +96,37 @@ export class HttpInferenceEngine implements InferenceEngine {
       body: JSON.stringify({ hardware_map: grid }),
     });
 
-    if (!res.ok) throw new Error(`모델 서버 응답 오류 ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      throw new Error(`모델 서버 응답 오류 ${res.status} ${res.statusText} ${detail}`.trim());
+    }
 
     const data = (await res.json()) as PredictResponse;
-    const probabilities = toProbabilityVector(data);
     const features = extractFeatures(map);
 
-    const verdict = verdictFromProbabilities(probabilities, map, features, {
-      engineVersion: data.primary_model || PRIMARY_MODEL,
+    const verdict = verdictFromProbabilities(toProbabilityVector(data), map, features, {
+      engineVersion: data.model || PRIMARY_MODEL,
     });
 
     return {
       ...verdict,
-      // 서버가 검토 판단을 내려주면 그쪽이 정본이다. UI 규칙은 서버가 없을 때만 쓴다.
-      review: data.review_reasons ? fromServerReasons(data.review_reasons) : verdict.review,
-      auxiliary: data.auxiliary_used
-        ? {
-            used: true,
-            binaryDefectScore: data.v3_binary_defect_score ?? null,
-            prediction: data.v3_auxiliary_prediction ?? null,
-            score: data.v3_auxiliary_score ?? null,
-          }
-        : undefined,
+      // 서버 판정이 정본. 1순위 클래스도 서버가 고른 걸 그대로 쓴다.
+      top: data.prediction,
+      topScore: data.score,
+      review: fromServerReasons(data.review_reason ?? []),
+      model: {
+        status: data.status,
+        classThreshold: data.class_threshold,
+        auxiliaryPrediction: data.auxiliary_prediction,
+        auxiliaryScore: data.auxiliary_score,
+        v3DefectScore: data.v3_defect_score,
+        v3BinaryThreshold: data.v3_binary_threshold,
+        defectCellCount: data.defect_cell_count,
+        direction: data.direction,
+        directionConfidence: data.direction_confidence,
+        directionMethod: data.direction_method,
+        quadrantCounts: data.quadrant_counts,
+      },
       inferMs: performance.now() - t0,
     };
   }
@@ -118,16 +136,34 @@ export class HttpInferenceEngine implements InferenceEngine {
 function toProbabilityVector(data: PredictResponse): number[] {
   if (data.probabilities?.length === CLASS_NAMES.length) return data.probabilities;
 
+  // serve.py가 probabilities를 안 실어 준 경우의 폴백.
+  // top_predictions만 있으면 빠진 클래스는 0이 되어 계통 합이 실제보다 낮아진다.
   const v = new Array(CLASS_NAMES.length).fill(0);
-  for (const t of data.v2_top_predictions ?? []) {
+  for (const t of data.top_predictions ?? []) {
     const i = CLASS_NAMES.indexOf(t.class);
     if (i >= 0) v[i] = t.score;
   }
-  // top-k만 온 경우 1순위라도 확실히 반영한다
-  const topIdx = CLASS_NAMES.indexOf(data.final_prediction);
-  if (topIdx >= 0 && v[topIdx] === 0) v[topIdx] = data.final_score;
+  const topIdx = CLASS_NAMES.indexOf(data.prediction);
+  if (topIdx >= 0 && v[topIdx] === 0) v[topIdx] = data.score;
   return v;
 }
+
+/** 실제 모델 서버가 살아 있는지 */
+export async function probeModelServer(baseUrl: string): Promise<{ ok: boolean; detail: string }> {
+  try {
+    const res = await fetch(`${baseUrl}/health`);
+    if (!res.ok) return { ok: false, detail: `HTTP ${res.status}` };
+    const j = (await res.json()) as { device?: string; model?: string; v3_binary_threshold?: number };
+    return {
+      ok: true,
+      detail: `${j.model ?? '모델'} · device=${j.device ?? '?'} · V3 임계 ${j.v3_binary_threshold ?? '?'}`,
+    };
+  } catch (e) {
+    return { ok: false, detail: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export const DEFAULT_MODEL_SERVER = 'http://127.0.0.1:8077';
 
 let active: InferenceEngine = new RuleInferenceEngine();
 

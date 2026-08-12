@@ -12,6 +12,7 @@ import { currentEstimate, tradeoffCurve } from '../domain/scan';
 import { LineChart } from '../components/charts';
 import { Badge, Banner, Card, Stat } from '../components/ui';
 import { WIRE_PROTOCOL, serialSupported } from '../services/deviceLink';
+import { DEFAULT_MODEL_SERVER } from '../services/inference';
 import {
   AUDIT_ACTION_LABEL,
   CLASSIFICATION_META,
@@ -23,7 +24,7 @@ import { PROCESSES, PROCESS_ORDER } from '../domain/causes';
 import { useApp } from '../state/AppStore';
 
 export function DeviceLab() {
-  const { state, patch, connect, disconnect, setUser } = useApp();
+  const { state, patch, connect, disconnect, setUser, useModelEngine, useRuleEngine } = useApp();
   const { timing, circleMask, noise, visualDurationMs, scanOrder, linkState, linkKind } = state;
 
   const est = useMemo(() => currentEstimate(timing, circleMask), [timing, circleMask]);
@@ -101,6 +102,61 @@ export function DeviceLab() {
               스캔 {est.scanMs.toFixed(1)} ms · 래치 {est.latchMs.toFixed(2)} ms · 전송 {est.transferMs.toFixed(1)} ms
             </dd>
           </dl>
+        </Card>
+
+        <Card
+          title="판정 엔진"
+          sub="규칙 대체판과 실제 학습 모델 중 무엇으로 판정할지"
+          actions={
+            <Badge color={state.engineKind === 'model' ? '--good' : '--warning'} strong>
+              {state.engineKind === 'model' ? '실제 모델' : '규칙 대체판'}
+            </Badge>
+          }
+        >
+          <div className="row" style={{ gap: 10, alignItems: 'flex-end' }}>
+            <label className="field" style={{ flex: 1 }}>
+              <span>모델 서버 주소</span>
+              <input
+                type="text"
+                value={state.modelServerUrl}
+                onChange={(e) => patch({ modelServerUrl: e.target.value })}
+                placeholder={DEFAULT_MODEL_SERVER}
+              />
+            </label>
+            <button
+              className="btn btn-primary"
+              disabled={state.modelServerStatus === 'checking'}
+              onClick={() => useModelEngine(state.modelServerUrl)}
+            >
+              {state.modelServerStatus === 'checking' ? '확인 중…' : '실제 모델 연결'}
+            </button>
+            <button className="btn" onClick={useRuleEngine} disabled={state.engineKind === 'rule'}>
+              규칙 대체판으로
+            </button>
+          </div>
+
+          {state.modelServerStatus === 'up' && (
+            <div className="banner info" style={{ marginTop: 10 }}>
+              <span className="caveat-icon" aria-hidden>i</span>
+              <div>{state.modelServerDetail}</div>
+            </div>
+          )}
+          {state.modelServerStatus === 'down' && (
+            <Banner kind="warn">
+              모델 서버에 연결하지 못했습니다 — {state.modelServerDetail}
+              <div style={{ marginTop: 6, color: 'var(--text-muted)' }}>
+                <code className="mono">wafer_final_package</code> 폴더에서 서버를 먼저 띄우세요:
+                <br />
+                <code className="mono">.venv\Scripts\python serve.py</code>
+              </div>
+            </Banner>
+          )}
+
+          <p className="section-note" style={{ marginTop: 10, color: 'var(--text-muted)' }}>
+            규칙 대체판은 학습된 모델이 아니라 UI를 돌리기 위한 임시 판정기다. 실제 모델(WaferCNNV2 + V3)에
+            연결하면 클래스별 임계값·V3 대조·사분면 방향 판정이 모델 정책 그대로 적용된다. 특히 검토 필요 여부는
+            UI가 다시 계산하지 않고 서버 판단을 그대로 쓴다.
+          </p>
         </Card>
 
         <Card title="측정 파라미터">
