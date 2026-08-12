@@ -103,7 +103,7 @@ function patternsInPlay(patterns: Verdict['patterns']): Map<DefectPatternId, num
   return out;
 }
 
-export function buildPlan(verdict: Verdict): DiagnosisPlan {
+export function buildPlan(verdict: Verdict, measuredProcess?: ProcessId): DiagnosisPlan {
   const { patterns, features } = verdict;
   const probOf = patternsInPlay(patterns);
 
@@ -142,8 +142,12 @@ export function buildPlan(verdict: Verdict): DiagnosisPlan {
         a.actionable.etaMin - b.actionable.etaMin,
     );
     const factorSpread = new Set(causes.map((c) => c.factor)).size;
-    // 여러 요인 축에서 지목될수록 연관이 강하다고 본다
-    const weight = causes.reduce((s, c) => s + c.score, 0) * (1 + (factorSpread - 1) * 0.15);
+    // 여러 요인 축에서 지목될수록 연관이 강하다고 본다.
+    // 그리고 이번 맵을 실제로 측정한 공정은 먼저 본다 — 그 공정의 지표가 이탈해서
+    // 이 맵이 나온 것이므로, 원인이 다른 공정일 수는 있어도 출발점은 여기다.
+    const measuredBoost = measuredProcess && process === measuredProcess ? 1.5 : 1;
+    const weight =
+      causes.reduce((s, c) => s + c.score, 0) * (1 + (factorSpread - 1) * 0.15) * measuredBoost;
     return { process, causes, factorSpread, weight };
   });
 

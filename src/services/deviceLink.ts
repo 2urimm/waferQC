@@ -1,5 +1,6 @@
-import { ADC_MAX, adcToCell, type ScanOrder, type TimingBudget } from '../config/hardware';
+import { ADC_MAX, type ScanOrder, type TimingBudget } from '../config/hardware';
 import { CELL_DEFECT, CELL_NORMAL, CELL_OUTSIDE, type CellState } from '../config/model';
+import { defaultSpec, specBounds, withinSpec, type Metric, type SpecSetting } from '../domain/metrology';
 import { buildScanSequence, estimateTime } from '../domain/scan';
 import type { ScanFrame, ScanProgress, WaferMap } from '../domain/types';
 
@@ -26,8 +27,10 @@ export interface ScanOptions {
    * 점을 그대로 보여주기 위해 일부러 남겨 둔 동작이다.
    */
   noise: number;
-  /** ADC 정규화값이 이 이상이면 불량 die로 판정 */
-  defectCutoff: number;
+  /** 어떤 지표를 재는가 */
+  metric: Metric;
+  /** 양/불을 가르는 스펙 */
+  spec: SpecSetting;
   onProgress?: (p: ScanProgress) => void;
   signal?: AbortSignal;
 }
@@ -71,6 +74,17 @@ export class MockDeviceLink implements DeviceLink {
     const raw = new Array(truth.length).fill(0);
     const values = new Array<number>(truth.length).fill(0);
     const cells = new Array<CellState>(truth.length).fill(CELL_OUTSIDE);
+    const measurements = new Array<number | null>(truth.length).fill(null);
+    /*
+     * 물리량은 지표의 **기본 스펙**을 기준으로 만들고, 판정은 **사용자가 설정한 스펙**으로 한다.
+     * 둘을 같은 걸로 쓰면 안 된다 — 그러면 스펙을 조여도 측정값이 같이 따라 움직여서
+     * 판정이 절대 안 바뀐다. 실제로는 웨이퍼의 물리량이 먼저 있고 스펙이 나중에 그걸
+     * 판정하는 것이므로, 스펙을 조이면 경계에 있던 지점이 불량으로 넘어가야 맞다.
+     */
+    const gen = specBounds(opts.metric, defaultSpec(opts.metric));
+    // 센서 전압을 물리량으로 환산할 때 쓰는 눈금. 기본 스펙 폭의 6배를 전 구간으로 잡는다.
+    const span = gen.mode === 'upper' ? Math.max(gen.hi, 1) * 6 : Math.max(gen.hi - (gen.lo ?? 0), 1e-9) * 6;
+    const floor = gen.mode === 'upper' ? 0 : opts.metric.defaultTarget - span / 2;
 
     const report = (phase: ScanProgress['phase'], read: number, message: string) =>
       opts.onProgress?.({ phase, read, total: seq.length, message });
@@ -86,15 +100,31 @@ export class MockDeviceLink implements DeviceLink {
     for (const step of seq) {
       if (opts.signal?.aborted) throw new DOMException('스캔이 취소되었습니다.', 'AbortError');
 
-      // 웨이퍼에 실제로 있는 상태를 센서 전압으로 되돌린 뒤, 그 전압을 다시 셀 상태로
-      // 판정한다. 굳이 왕복시키는 이유는 그게 실제 경로이기 때문이다 —
-      // 노이즈가 임계를 넘기면 판정이 뒤집히고, 그게 이 시스템의 실제 한계다.
+      /*
+       * 실제 경로를 그대로 왕복시킨다.
+       *   웨이퍼의 실제 상태 → 그 지점의 물리량(두께·선폭 등) → 센서 전압 → 물리량 환산
+       *   → 스펙 대조 → 양품(1) / 불량(2)
+       * 굳이 전압을 거치는 이유는 그게 실제 측정 경로이기 때문이다. 노이즈가 스펙 경계를
+       * 넘기면 판정이 뒤집히는데, 그게 이 시스템의 실제 한계이고 숨기면 안 되는 부분이다.
+       */
       const i = step.row * 8 + step.col;
-      const clean = CELL_LEVEL[truth[i] ?? CELL_OUTSIDE];
-      const noisy = clamp01(clean + (Math.random() - 0.5) * 2 * opts.noise);
-      raw[i] = Math.round(noisy * ADC_MAX);
-      values[i] = raw[i] / ADC_MAX;
-      cells[i] = adcToCell(values[i], opts.defectCutoff);
+      const state = truth[i] ?? CELL_OUTSIDE;
+
+      if (state === CELL_OUTSIDE) {
+        raw[i] = 0;
+        values[i] = 0;
+        cells[i] = CELL_OUTSIDE;
+      } else {
+        const ideal = idealValue(state, defaultSpec(opts.metric), gen);
+        // 물리량 → 전압 (0~1 눈금) → 노이즈 → 다시 물리량
+        const v = clamp01((ideal - floor) / span);
+        const noisy = clamp01(v + (Math.random() - 0.5) * 2 * opts.noise * 0.25);
+        raw[i] = Math.round(noisy * ADC_MAX);
+        values[i] = raw[i] / ADC_MAX;
+        const measured = floor + values[i] * span;
+        measurements[i] = measured;
+        cells[i] = withinSpec(measured, opts.metric, opts.spec) ? CELL_NORMAL : CELL_DEFECT;
+      }
 
       // 매 스텝 리렌더는 낭비라 ~16ms 간격으로만 올린다.
       // 진행 보고와 양보는 전부 타이머로만 한다 — requestAnimationFrame은 탭이 화면에
@@ -115,8 +145,11 @@ export class MockDeviceLink implements DeviceLink {
 
     return {
       cells,
+      measurements,
       values,
       raw,
+      metricId: opts.metric.id,
+      spec: opts.spec,
       // 실제 보드가 걸릴 시간(타이밍 예산 기준 추정). 위의 배속은 시각화용일 뿐이다.
       elapsedMs: est.totalMs,
       source: 'mock',
@@ -126,15 +159,35 @@ export class MockDeviceLink implements DeviceLink {
 }
 
 /**
- * 셀 상태별 기대 센서 전압 (정규화).
- * 웨이퍼가 없는 칸은 거의 0, 정상 die는 중간, 불량 die는 높게 읽힌다고 가정했다.
- * ⚠ 실제 센서 특성이 나오면 이 값들을 실측으로 교체할 것.
+ * 그 지점이 양품/불량일 때 물리량이 대략 어디쯤 나오는가.
+ * 양품은 스펙 안쪽에, 불량은 스펙 밖으로 떨어뜨리되 어느 쪽으로 벗어날지는 무작위다 —
+ * 두께가 얇아도 두꺼워도 불량이고, 어느 쪽이냐가 원인을 가르기 때문이다
+ * (과식각 vs 저식각, 과연마 vs 저연마).
  */
-const CELL_LEVEL: Record<CellState, number> = {
-  [CELL_OUTSIDE]: 0.03,
-  [CELL_NORMAL]: 0.32,
-  [CELL_DEFECT]: 0.86,
-};
+function idealValue(
+  state: CellState,
+  spec: SpecSetting,
+  b: { mode: 'percent' | 'upper'; lo?: number; hi: number },
+): number {
+  const good = state === CELL_NORMAL;
+
+  if (b.mode === 'upper') {
+    // 개수형 지표 — 적을수록 좋다
+    return good ? Math.random() * b.hi * 0.55 : b.hi * (1.4 + Math.random() * 1.6);
+  }
+
+  const lo = b.lo ?? 0;
+  const half = (b.hi - lo) / 2;
+  const center = spec.target;
+
+  if (good) {
+    // 스펙 폭의 안쪽 60% 안에서
+    return center + (Math.random() - 0.5) * 2 * half * 0.6;
+  }
+  // 스펙 밖으로 1.3~2.4배
+  const side = Math.random() < 0.5 ? -1 : 1;
+  return center + side * half * (1.3 + Math.random() * 1.1);
+}
 
 /* ── 실제 보드 (미구현) ─────────────────────────────────────────────────────── */
 

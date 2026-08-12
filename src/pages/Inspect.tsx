@@ -1,5 +1,17 @@
 import { useMemo } from 'react';
 import { CELL_COUNT } from '../config/hardware';
+import { PROCESSES, PROCESS_ORDER, type ProcessId } from '../domain/causes';
+import {
+  METRICS,
+  METRIC_FORM_LABEL,
+  deviationPct,
+  formatSpec,
+  formatValue,
+  measurementSec,
+  metricsOf,
+  specSide,
+  type MetricId,
+} from '../domain/metrology';
 import { buildPlan } from '../domain/plan';
 import { PATTERN_PRESETS } from '../domain/patterns';
 import { currentEstimate } from '../domain/scan';
@@ -12,12 +24,44 @@ import { Badge, Banner, Card, Empty } from '../components/ui';
 import { PROCESS_CLASSIFICATION } from '../services/security';
 import { useApp } from '../state/AppStore';
 
-export function Inspect() {
-  const { state, patch, setCell, applyPreset, clearDraft, runScan, cancelScan, scanning, toggleAction, logAudit } =
-    useApp();
-  const { draft, frame, verdict, progress, circleMask, linkState, linkError } = state;
+/** 초 단위를 사람이 읽는 단위로 */
+function fmtDuration(sec: number): string {
+  if (sec < 60) return `${sec.toFixed(0)}초`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}분 ${Math.round(sec % 60)}초`;
+  return `${(sec / 3600).toFixed(1)}시간`;
+}
 
-  const plan = useMemo(() => (verdict ? buildPlan(verdict) : null), [verdict]);
+export function Inspect() {
+  const {
+    state,
+    patch,
+    setCell,
+    applyPreset,
+    clearDraft,
+    runScan,
+    cancelScan,
+    scanning,
+    toggleAction,
+    logAudit,
+    setProcess,
+    setMetric,
+  } = useApp();
+  const { draft, frame, verdict, progress, circleMask, linkState, linkError } = state;
+  const metric = METRICS[state.metricId];
+
+  const plan = useMemo(() => (verdict ? buildPlan(verdict, state.process) : null), [verdict, state.process]);
+
+  // 지점별 측정값을 툴팁 문구로 — 어느 지점이 스펙 어디를 벗어났는지 바로 읽히게
+  const cellDetail = useMemo(() => {
+    if (!frame?.measurements) return undefined;
+    return frame.measurements.map((m) => {
+      if (m === null) return null;
+      const side = specSide(m, metric, frame.spec);
+      const dev = deviationPct(m, metric, frame.spec);
+      const tag = side === 'in' ? '스펙 내' : side === 'low' ? '스펙 하한 미달' : '스펙 상한 초과';
+      return `${formatValue(m, metric)} (${dev >= 0 ? '+' : ''}${dev.toFixed(1)}%, ${tag})`;
+    });
+  }, [frame, metric]);
   const est = useMemo(() => currentEstimate(state.timing, circleMask), [state.timing, circleMask]);
 
   const current = state.history.find((i) => i.id === state.selectedInspectionId) ?? null;
@@ -67,6 +111,104 @@ export function Inspect() {
               프리셋은 정답을 외운 데모가 아니라 비교 기준이다. 직접 그린 임의 패턴도 같은 경로로 처리된다 —
               그게 이 시스템이 실제로 동작한다는 증거다.
             </p>
+          </Card>
+
+          <Card
+            title="측정 설정"
+            sub="공정마다 재는 지표가 다르다. 그 지표의 스펙을 벗어난 지점이 불량 die가 된다."
+          >
+            <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+              <label className="field" style={{ flex: 1, minWidth: 150 }}>
+                <span>공정</span>
+                <select
+                  value={state.process}
+                  onChange={(e) => setProcess(e.target.value as ProcessId)}
+                  disabled={scanning}
+                >
+                  {PROCESS_ORDER.filter((p) => p !== 'COMMON').map((p) => (
+                    <option key={p} value={p}>
+                      {PROCESSES[p].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field" style={{ flex: 1, minWidth: 170 }}>
+                <span>측정 지표</span>
+                <select
+                  value={state.metricId}
+                  onChange={(e) => setMetric(e.target.value as MetricId)}
+                  disabled={scanning}
+                >
+                  {metricsOf(state.process).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                      {m.primary ? ' ★ 주 진단지표' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="row" style={{ gap: 6, marginTop: 8 }}>
+              <Badge>{metric.method}</Badge>
+              <Badge>{METRIC_FORM_LABEL[metric.form]}</Badge>
+              {metric.destructive && (
+                <Badge color="--critical" strong>
+                  웨이퍼 소모
+                </Badge>
+              )}
+              <Badge>
+                {metric.perWaferSec !== undefined
+                  ? `웨이퍼당 ${metric.perWaferSec}초`
+                  : `지점당 ${metric.perPointSec}초`}
+              </Badge>
+            </div>
+            <p className="section-note" style={{ marginTop: 6, color: 'var(--text-muted)' }}>
+              {metric.reflects}
+              {metric.scope && ` · 적용 범위: ${metric.scope}`}
+            </p>
+
+            <div className="divider" style={{ margin: '12px 0' }} />
+
+            <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+              <label className="field" style={{ flex: 1 }}>
+                <span>{metric.specMode === 'upper' ? `상한값 (${metric.unit})` : `목표값 (${metric.unit})`}</span>
+                <input
+                  type="number"
+                  value={state.spec.target}
+                  step="any"
+                  disabled={scanning}
+                  onChange={(e) => patch({ spec: { ...state.spec, target: Number(e.target.value) } })}
+                />
+              </label>
+              {metric.specMode === 'percent' && (
+                <label className="field" style={{ flex: 1 }}>
+                  <span>허용 편차 (±%)</span>
+                  <input
+                    type="number"
+                    value={state.spec.tolerancePct}
+                    min={0.1}
+                    step={0.1}
+                    disabled={scanning}
+                    onChange={(e) => patch({ spec: { ...state.spec, tolerancePct: Number(e.target.value) } })}
+                  />
+                </label>
+              )}
+            </div>
+            <p className="section-note" style={{ marginTop: 6 }}>
+              판정 기준 <strong>{formatSpec(metric, state.spec)}</strong>
+              {metric.specMode === 'percent' && ' — 이 범위를 벗어난 지점이 불량 die다.'}
+            </p>
+
+            <div className="banner info" style={{ marginTop: 10 }}>
+              <span className="caveat-icon" aria-hidden>i</span>
+              <div>
+                64지점을 이 방법으로 재면 웨이퍼 한 장에 <strong>{fmtDuration(measurementSec(metric, 64))}</strong>,
+                로트 25장이면 {fmtDuration(measurementSec(metric, 64) * 25)} 걸린다. 실제 fab이 전면을 다 재지 않고
+                몇 군데만 재는 이유가 이 숫자다.
+                {metric.destructive && ' 게다가 이 방법은 웨이퍼를 소모하므로 전수 측정 자체가 불가능하다.'}
+              </div>
+            </div>
           </Card>
 
           <Card title="로트 정보">
@@ -133,6 +275,7 @@ export function Inspect() {
                 <WaferGrid
                   map={shown}
                   values={frame?.values}
+                  detail={cellDetail}
                   readCount={scanning && progress.phase === 'scan' ? progress.read : undefined}
                   activeIndex={scanning && progress.phase === 'scan' ? progress.read - 1 : undefined}
                   size={220}

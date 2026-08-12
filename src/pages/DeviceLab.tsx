@@ -24,7 +24,7 @@ import { useApp } from '../state/AppStore';
 
 export function DeviceLab() {
   const { state, patch, connect, disconnect, setUser } = useApp();
-  const { timing, circleMask, defectCutoff, noise, visualDurationMs, scanOrder, linkState, linkKind } = state;
+  const { timing, circleMask, noise, visualDurationMs, scanOrder, linkState, linkKind } = state;
 
   const est = useMemo(() => currentEstimate(timing, circleMask), [timing, circleMask]);
   const curve = useMemo(() => tradeoffCurve(timing), [timing]);
@@ -105,22 +105,13 @@ export function DeviceLab() {
 
         <Card title="측정 파라미터">
           <div className="stack" style={{ gap: 12 }}>
-            <label className="field">
-              <span>불량 die 판정 전압 — {defectCutoff.toFixed(2)}</span>
-              <input
-                type="range"
-                min={0.2}
-                max={0.9}
-                step={0.01}
-                value={defectCutoff}
-                onChange={(e) => patch({ defectCutoff: Number(e.target.value) })}
-              />
-            </label>
-            <p className="section-note" style={{ color: 'var(--text-muted)', marginTop: -6 }}>
-              센서 전압(정규화)이 이 값 이상이면 그 칸을 불량 die(2)로 판정한다. 노트북의 변환 임계값(0.05)과는
-              다른 것이다 — 그건 고해상도 맵을 8×8로 줄일 때 쓰는 면적 비율이고, 이건 센서 하나의 전압 임계다.
-              실제 보드가 나오면 알려진 정상/불량 웨이퍼의 전압 히스토그램으로 잡아야 한다.
-            </p>
+            <div className="banner info">
+              <span className="caveat-icon" aria-hidden>i</span>
+              <div>
+                양/불 판정 기준(공정·지표·스펙)은 <strong>검사</strong> 탭에서 설정한다. 웨이퍼 맵은 공정마다
+                재는 지표가 다르고, 그 지표의 스펙을 벗어난 지점이 불량 die가 되기 때문이다.
+              </div>
+            </div>
 
             <label className="field">
               <span>센서 노이즈 (가상 장치) — {noise.toFixed(2)}</span>

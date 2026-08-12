@@ -157,7 +157,7 @@ export const MANUALS: ManualRef[] = [
   },
   {
     id: 'm-oxid-rtp',
-    process: 'OXIDATION',
+    process: 'DIFFUSION',
     title: 'RTP 존 파워 배분 및 온도 프로파일',
     path: '\\\\fileserver\\공정매뉴얼\\02_산화\\OXI-PRC-011_RTP_존파워.pdf',
     section: '3장 방사형 구배 보정',
@@ -168,7 +168,7 @@ export const MANUALS: ManualRef[] = [
   },
   {
     id: 'm-clean-rinse',
-    process: 'CLEAN',
+    process: 'CLEANING',
     title: '세정 Rinse 노즐 점검 및 분사 조건',
     path: '\\\\fileserver\\공정매뉴얼\\10_세정\\CLN-MNT-005_Rinse노즐_점검.pdf',
     section: '2장 노즐 스윕 범위 설정',

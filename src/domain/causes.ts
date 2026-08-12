@@ -74,25 +74,18 @@ export const FACTOR_META: Record<FactorType, { label: string; short: string; hin
 };
 
 /**
- * 공정 단계 — 8대 공정 + CMP · 세정.
+ * 공정 6종.
  *
- * 8대 공정(웨이퍼제조 → 산화 → 포토 → 식각 → 증착·이온주입 → 금속배선 → EDS → 패키징)을
- * step 1~8로 두고, 표에 등장하지만 8대 분류에 안 들어가는 CMP와 세정을 별도 단계로 붙였다.
- * COMMON은 공정이 아니라 여러 공정에 공통으로 걸리는 설비(ESC, 반송 로봇, 게이트 도어)용이며,
- * 원본 표의 "구분 X" 항목이 여기로 온다.
+ * 팀 결정: 측정지표를 공정별로 통일하려다 보니 6개로 통합하는 게 맞다고 판단했다.
+ * (8대 공정에서 웨이퍼제조·금속배선·EDS·패키징을 빼고, 산화를 Diffusion으로 묶음)
+ * 각 공정은 주 진단지표를 정확히 하나씩 갖는다 — domain/metrology.ts 참고.
+ *
+ * COMMON은 공정이 아니다. 여러 공정에 공통으로 걸리는 설비(ESC, 반송 로봇, 게이트 도어)용이고,
+ * 원본 원인 표의 "구분 X" 항목이 여기로 온다. 6개 공정과 별개로 두는 이유는 이 설비들이
+ * 특정 공정에 속하지 않으면서도 그 공정의 지표를 통해서만 확인되기 때문이다
+ * (예: ESC 헬륨 누설은 후속 식각의 CD로 드러난다).
  */
-export type ProcessId =
-  | 'WAFER'
-  | 'OXIDATION'
-  | 'PHOTO'
-  | 'ETCH'
-  | 'DEPOSITION'
-  | 'METAL'
-  | 'EDS'
-  | 'PACKAGING'
-  | 'CMP'
-  | 'CLEAN'
-  | 'COMMON';
+export type ProcessId = 'DIFFUSION' | 'DEPOSITION' | 'PHOTO' | 'ETCH' | 'CLEANING' | 'CMP' | 'COMMON';
 
 export interface ProcessMeta {
   id: ProcessId;
@@ -107,26 +100,26 @@ export interface ProcessMeta {
 }
 
 export const PROCESSES: Record<ProcessId, ProcessMeta> = {
-  WAFER: {
-    id: 'WAFER',
+  DIFFUSION: {
+    id: 'DIFFUSION',
     step: 1,
-    label: '웨이퍼 제조',
-    short: '웨이퍼',
-    core: true,
-    character: '잉곳 성장·슬라이싱 단계의 결정 결함. 로트 전체에 걸쳐 재현되는 게 특징이다.',
-  },
-  OXIDATION: {
-    id: 'OXIDATION',
-    step: 2,
-    label: '산화 · 확산 (열처리)',
-    short: '산화',
+    label: '확산 (Diffusion)',
+    short: '확산',
     core: true,
     character: '온도 구배가 그대로 공간 패턴이 된다. RTP 존 배치가 방사형 결함의 반경을 결정한다.',
+  },
+  DEPOSITION: {
+    id: 'DEPOSITION',
+    step: 2,
+    label: '증착 (Deposition)',
+    short: '증착',
+    core: true,
+    character: '샤워헤드 가스 분배와 RF 매칭이 중심/외곽 두께 균일도를 결정한다.',
   },
   PHOTO: {
     id: 'PHOTO',
     step: 3,
-    label: '포토 (노광)',
+    label: '노광 (Photo)',
     short: '포토',
     core: true,
     character: '스핀 코팅의 회전 대칭성과 EBR의 가장자리 처리가 패턴을 만든다.',
@@ -134,58 +127,26 @@ export const PROCESSES: Record<ProcessId, ProcessMeta> = {
   ETCH: {
     id: 'ETCH',
     step: 4,
-    label: '식각',
+    label: '식각 (Etch)',
     short: '식각',
     core: true,
     character: '플라즈마 밀도 분포와 소모품(포커스 링) 상태가 반경 방향 편차를 만든다.',
   },
-  DEPOSITION: {
-    id: 'DEPOSITION',
+  CLEANING: {
+    id: 'CLEANING',
     step: 5,
-    label: '증착 · 이온주입',
-    short: '증착',
+    label: '세정 (Cleaning)',
+    short: '세정',
     core: true,
-    character: '샤워헤드 가스 분배와 RF 매칭이 중심/외곽 균일도를 결정한다.',
-  },
-  METAL: {
-    id: 'METAL',
-    step: 6,
-    label: '금속 배선',
-    short: '금속',
-    core: true,
-    character: '스퍼터 타겟 침식 프로파일이 반경 방향 두께 분포로 나타난다.',
-  },
-  EDS: {
-    id: 'EDS',
-    step: 7,
-    label: 'EDS (전기적 검사)',
-    short: 'EDS',
-    core: true,
-    character: '공간 결함을 만들지는 않지만, 공간 패턴 없는 수율 손실이 여기서 드러난다.',
-  },
-  PACKAGING: {
-    id: 'PACKAGING',
-    step: 8,
-    label: '패키징',
-    short: '패키징',
-    core: true,
-    character: '웨이퍼 단계 이후라 웨이퍼맵 결함의 원인이 되지는 않는다.',
+    character: '노즐 위치와 원심 건조가 잔류물의 공간 분포를 결정한다.',
   },
   CMP: {
     id: 'CMP',
-    step: 9,
+    step: 6,
     label: '평탄화 (CMP)',
     short: 'CMP',
-    core: false,
+    core: true,
     character: '헤드 압력 존과 패드 마모 형상이 제거율 프로파일을 만든다.',
-  },
-  CLEAN: {
-    id: 'CLEAN',
-    step: 10,
-    label: '세정',
-    short: '세정',
-    core: false,
-    character: '노즐 위치와 원심 건조가 잔류물의 공간 분포를 결정한다.',
   },
   COMMON: {
     id: 'COMMON',
@@ -193,23 +154,12 @@ export const PROCESSES: Record<ProcessId, ProcessMeta> = {
     label: '공통 설비 · 반송',
     short: '공통',
     core: false,
-    character: '특정 공정이 아니라 여러 공정에 공통으로 걸리는 설비(ESC, 반송 로봇, 게이트 도어).',
+    character:
+      '특정 공정이 아니라 여러 공정에 공통으로 걸리는 설비(ESC, 반송 로봇, 게이트 도어). 전용 지표가 없어 후속 공정의 주 진단지표로 확인한다.',
   },
 };
 
-export const PROCESS_ORDER: ProcessId[] = [
-  'WAFER',
-  'OXIDATION',
-  'PHOTO',
-  'ETCH',
-  'DEPOSITION',
-  'METAL',
-  'EDS',
-  'PACKAGING',
-  'CMP',
-  'CLEAN',
-  'COMMON',
-];
+export const PROCESS_ORDER: ProcessId[] = ['DIFFUSION', 'DEPOSITION', 'PHOTO', 'ETCH', 'CLEANING', 'CMP', 'COMMON'];
 
 export type Disruption = 'none' | 'low' | 'high';
 
@@ -378,7 +328,7 @@ export const CAUSE_MATRIX: CauseEntry[] = [
     id: 'donut-static-diffusion',
     pattern: 'Donut',
     factor: 'static',
-    process: 'OXIDATION',
+    process: 'DIFFUSION',
     equipment: 'RTP 램프 뱅크',
     cause: 'RTP 보상 가열 중 방사형 온도 구배 발생',
     mechanism: ['중간 반경에서 열 응력이 역전', '해당 반경 대역에만 결함이 링 형태로 남음'],
@@ -398,7 +348,7 @@ export const CAUSE_MATRIX: CauseEntry[] = [
     id: 'donut-static-clean',
     pattern: 'Donut',
     factor: 'static',
-    process: 'CLEAN',
+    process: 'CLEANING',
     equipment: 'Rinse 노즐',
     cause: 'Rinse 노즐 위치 및 분사 압력 불균형',
     mechanism: ['원심력으로 바깥까지 밀려나지 못한 잔류물', '중간 반경에 원형으로 residue 잔류'],
@@ -546,7 +496,7 @@ export const CAUSE_MATRIX: CauseEntry[] = [
     id: 'edgering-spatial-rtp',
     pattern: 'Edge-Ring',
     factor: 'spatial',
-    process: 'OXIDATION',
+    process: 'DIFFUSION',
     equipment: 'RTP 램프 뱅크',
     cause: 'RTP 보상 가열 중 방사형 온도 구배',
     mechanism: ['중간 반경에 열 응력 역전', '링 형태로 결함 형성'],

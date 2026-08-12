@@ -57,16 +57,12 @@ export const CLASSIFICATION_META: Record<Classification, { label: string; short:
 
 /** 공정별 기밀 등급. 실제로는 사내 정보보호 정책 테이블에서 내려와야 한다. */
 export const PROCESS_CLASSIFICATION: Record<ProcessId, Classification> = {
-  WAFER: 'internal',
-  OXIDATION: 'confidential',
+  DIFFUSION: 'confidential',
+  DEPOSITION: 'restricted',
   PHOTO: 'restricted',
   ETCH: 'restricted',
-  DEPOSITION: 'restricted',
-  METAL: 'confidential',
-  EDS: 'confidential',
-  PACKAGING: 'internal',
+  CLEANING: 'internal',
   CMP: 'confidential',
-  CLEAN: 'internal',
   COMMON: 'internal',
 };
 
@@ -86,14 +82,14 @@ export const DEMO_USERS: User[] = [
     id: 'u-etch',
     name: '식각 담당 (데모)',
     role: 'process_owner',
-    ownedProcesses: ['ETCH', 'CLEAN'],
+    ownedProcesses: ['ETCH', 'CLEANING'],
     dept: '식각기술파트',
   },
   {
     id: 'u-depo',
     name: '증착 담당 (데모)',
     role: 'process_owner',
-    ownedProcesses: ['DEPOSITION', 'OXIDATION'],
+    ownedProcesses: ['DEPOSITION', 'DIFFUSION'],
     dept: '박막기술파트',
   },
   { id: 'u-op', name: '오퍼레이터 (데모)', role: 'operator', ownedProcesses: [], dept: '제조1팀' },

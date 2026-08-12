@@ -6,6 +6,7 @@ import {
   PROCESSES,
   type ProcessId,
 } from '../domain/causes';
+import { METRIC_FORM_LABEL, measurementSec, primaryMetricOf, verificationOf } from '../domain/metrology';
 import type { DiagnosisPlan, RankedCause } from '../domain/plan';
 import { manualsForCause } from '../services/manuals';
 import {
@@ -109,9 +110,19 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
           {CLASSIFICATION_META[cls].label}
         </Badge>
       </div>
-      <p className="section-note" style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
+      <p className="section-note" style={{ color: 'var(--text-muted)', marginBottom: 8 }}>
         {tab.meta.character}
       </p>
+      {(() => {
+        const pm = primaryMetricOf(tab.process);
+        if (!pm) return null;
+        return (
+          <p className="section-note" style={{ marginBottom: 12 }}>
+            <strong style={{ fontWeight: 600 }}>주 진단지표</strong> {pm.label} · {pm.method} —{' '}
+            <span style={{ color: 'var(--text-muted)' }}>{pm.reflects}</span>
+          </p>
+        );
+      })()}
 
       {!seeCause ? (
         <div className="banner warn">
@@ -178,6 +189,7 @@ function CauseCard({
   onAudit: () => void;
 }) {
   const manuals = manualsForCause(cause.id);
+  const verification = verificationOf(cause.id);
   const doneCount = cause.actionable.checks.filter((_, i) => checked.includes(`${cause.id}#${i}`)).length;
   const allDone = doneCount === cause.actionable.checks.length && cause.actionable.checks.length > 0;
 
@@ -235,6 +247,41 @@ function CauseCard({
         </div>
       ) : (
         <>
+          {verification && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: '9px 11px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'var(--surface-sunken)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div className="row" style={{ gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600 }}>확인 계측</span>
+                <Badge strong>{verification.metric.label}</Badge>
+                <Badge>{verification.metric.method}</Badge>
+                <Badge>{METRIC_FORM_LABEL[verification.metric.form]}</Badge>
+                {verification.metric.destructive && (
+                  <Badge color="--critical" strong>
+                    웨이퍼 소모
+                  </Badge>
+                )}
+                <Badge>
+                  {verification.metric.perWaferSec !== undefined
+                    ? `웨이퍼당 ${verification.metric.perWaferSec}초`
+                    : `64지점 ${Math.round(measurementSec(verification.metric, 64) / 60)}분`}
+                </Badge>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                {verification.expect}
+              </div>
+              {verification.note && (
+                <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>{verification.note}</div>
+              )}
+            </div>
+          )}
+
           <div style={{ marginTop: 10 }}>
             <div className="card-sub" style={{ marginBottom: 4 }}>
               확인 항목 {cause.actionable.checks.length > 0 && `(${doneCount}/${cause.actionable.checks.length})`}

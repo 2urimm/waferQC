@@ -8,7 +8,9 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import { ADC_DEFECT_CUTOFF, CELL_COUNT, DEFAULT_TIMING, type ScanOrder, type TimingBudget } from '../config/hardware';
+import { CELL_COUNT, DEFAULT_TIMING, type ScanOrder, type TimingBudget } from '../config/hardware';
+import { METRICS, defaultSpec, primaryMetricOf, type MetricId, type SpecSetting } from '../domain/metrology';
+import type { ProcessId } from '../domain/causes';
 import type { CellState } from '../config/model';
 import { blankWafer, buildPreset } from '../domain/patterns';
 import type { Inspection, ScanFrame, ScanProgress, Verdict, WaferMap } from '../domain/types';
@@ -29,8 +31,12 @@ interface State {
   timing: TimingBudget;
   scanOrder: ScanOrder;
   circleMask: boolean;
-  /** ADC 정규화값이 이 이상이면 불량 die로 판정 */
-  defectCutoff: number;
+  /** 어느 공정의 웨이퍼 맵인가 — 공정마다 재는 지표가 다르다 */
+  process: ProcessId;
+  /** 그 공정에서 무엇을 재는가 */
+  metricId: MetricId;
+  /** 양/불을 가르는 스펙 */
+  spec: SpecSetting;
   noise: number;
   visualDurationMs: number;
 
@@ -63,7 +69,9 @@ const initialState: State = {
   scanOrder: 'bank',
   // 원형 마스크는 이제 선택이 아니다 — 모델 입력의 0(웨이퍼 밖)이 곧 이 형상이다.
   circleMask: true,
-  defectCutoff: ADC_DEFECT_CUTOFF,
+  process: 'DEPOSITION',
+  metricId: 'THK',
+  spec: defaultSpec(METRICS.THK),
   noise: 0.05,
   visualDurationMs: 2200,
   draft: blankWafer(),
@@ -139,6 +147,9 @@ interface Store {
   scanning: boolean;
   setUser: (user: User) => void;
   logAudit: (action: AuditAction, target: string, classification?: Classification) => void;
+  /** 공정을 바꾸면 그 공정의 주 진단지표와 기본 스펙으로 같이 옮겨간다 */
+  setProcess: (process: ProcessId) => void;
+  setMetric: (metricId: MetricId) => void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -183,6 +194,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const cancelScan = useCallback(() => abortRef.current?.abort(), []);
 
+  // 공정을 고르면 그 공정의 주 진단지표가 기본값이 된다. 공정마다 무엇을 재는지가
+  // 정해져 있으므로, 사용자가 지표를 매번 다시 고르게 하면 안 된다.
+  const setProcess = useCallback(
+    (process: ProcessId) => {
+      const m = primaryMetricOf(process);
+      patch(m ? { process, metricId: m.id, spec: defaultSpec(m), frame: null, verdict: null } : { process });
+    },
+    [patch],
+  );
+
+  const setMetric = useCallback(
+    (metricId: MetricId) => patch({ metricId, spec: defaultSpec(METRICS[metricId]), frame: null, verdict: null }),
+    [patch],
+  );
+
   const runScan = useCallback(async () => {
     const link = linkRef.current;
     if (!link || link.state !== 'connected') {
@@ -201,7 +227,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         circleMask: state.circleMask,
         visualDurationMs: state.visualDurationMs,
         noise: state.noise,
-        defectCutoff: state.defectCutoff,
+        metric: METRICS[state.metricId],
+        spec: state.spec,
         signal: controller.signal,
         onProgress: (p) => dispatch({ type: 'progress', progress: p }),
       });
@@ -219,6 +246,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         waferNo: state.waferNo,
         capturedAt: frame.capturedAt,
         map: frame.cells,
+        measurements: frame.measurements,
+        metricId: frame.metricId,
+        spec: frame.spec,
         verdict,
         elapsedMs: frame.elapsedMs,
         source: frame.source,
@@ -310,6 +340,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       scanning,
       setUser,
       logAudit,
+      setProcess,
+      setMetric,
     }),
     [
       state,
@@ -328,6 +360,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       scanning,
       setUser,
       logAudit,
+      setProcess,
+      setMetric,
     ],
   );
 

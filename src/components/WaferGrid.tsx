@@ -25,12 +25,14 @@ interface Props {
   readCount?: number;
   /** 지금 읽고 있는 셀 인덱스 */
   activeIndex?: number;
-  /** 아날로그 측정값 (0~1) — 있으면 툴팁에 같이 보여준다 */
+  /** 아날로그 센서 전압 (0~1) */
   values?: number[];
+  /** 지점별 부가 설명 (측정값·스펙 편차 등) — 툴팁에 붙는다 */
+  detail?: (string | null)[];
   size?: number;
 }
 
-export function WaferGrid({ map, editable = false, onCell, readCount, activeIndex, values, size }: Props) {
+export function WaferGrid({ map, editable = false, onCell, readCount, activeIndex, values, detail, size }: Props) {
   const [painting, setPainting] = useState<CellState | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +76,7 @@ export function WaferGrid({ map, editable = false, onCell, readCount, activeInde
           }}
           title={
             `(${row}, ${col}) · ${clockOf(row, col)}시 · ${CELL_LABEL[v]}` +
-            (analog !== undefined ? ` · 측정 ${analog.toFixed(2)}` : '')
+            (detail?.[i] ? ` · ${detail[i]}` : analog !== undefined ? ` · 전압 ${analog.toFixed(2)}` : '')
           }
           aria-label={`행 ${row} 열 ${col}, ${CELL_LABEL[v]}`}
           onPointerDown={(e) => {

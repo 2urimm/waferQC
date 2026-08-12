@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { FAMILIES, FAMILY_ORDER, type FamilyId } from '../config/taxonomy';
 import { PATTERN_LABEL } from '../domain/causes';
+import { METRICS, formatSpec } from '../domain/metrology';
 import { buildPlan } from '../domain/plan';
 import { ProcessTabs } from '../components/ProcessTabs';
 import { ReportPanel } from '../components/ReportPanel';
@@ -25,7 +26,10 @@ export function History() {
   );
 
   const selected = state.history.find((h) => h.id === state.selectedInspectionId) ?? null;
-  const plan = useMemo(() => (selected ? buildPlan(selected.verdict) : null), [selected]);
+  const plan = useMemo(
+    () => (selected ? buildPlan(selected.verdict, selected.metricId ? METRICS[selected.metricId].process : undefined) : null),
+    [selected],
+  );
 
   return (
     <div className="stack">
@@ -115,6 +119,11 @@ export function History() {
                 <Badge>{selected.source === 'mock' ? '가상 장치' : '실제 보드'}</Badge>
                 <Badge>프레임 {selected.elapsedMs.toFixed(1)} ms</Badge>
                 <Badge>{selected.verdict.engineVersion}</Badge>
+                {selected.metricId && selected.spec && (
+                  <Badge strong>
+                    {METRICS[selected.metricId].label} · {formatSpec(METRICS[selected.metricId], selected.spec)}
+                  </Badge>
+                )}
               </div>
 
               <div className="divider" style={{ margin: '14px 0' }} />

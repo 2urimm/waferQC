@@ -1,6 +1,7 @@
 import type { CellState, ReviewReason } from '../config/model';
 import type { FamilyId } from '../config/taxonomy';
 import type { DefectPatternId } from './causes';
+import type { MetricId, SpecSetting } from './metrology';
 
 /**
  * 64칸 웨이퍼 맵 — 모델이 먹는 형태.
@@ -32,12 +33,20 @@ export interface ScanProgress {
 
 /** 하드웨어에서 돌아온 원시 프레임 */
 export interface ScanFrame {
-  /** 모델 입력 — 0/1/2 카테고리 */
+  /** 모델 입력 — 0/1/2 카테고리 (측정값을 스펙과 대조해 판정한 결과) */
   cells: WaferMap;
-  /** 0~1로 정규화한 측정 강도 (raw / ADC_MAX). 임계값 민감도를 보려면 이게 필요하다. */
+  /**
+   * 지점별 측정값 (선택한 지표의 단위). 웨이퍼 밖·미측정 지점은 null.
+   * 이게 실제 계측이 내놓는 것이고, 셀 상태는 여기에 스펙을 적용해 나온다.
+   */
+  measurements: (number | null)[];
+  /** 0~1로 정규화한 센서 전압 (raw / ADC_MAX) */
   values: number[];
   /** ADC 원시값 */
   raw: number[];
+  /** 이 프레임을 만든 지표와 스펙 — 나중에 이력에서 다시 볼 때 필요하다 */
+  metricId: MetricId;
+  spec: SpecSetting;
   /** 실제 걸린 시간 (ms) */
   elapsedMs: number;
   /** Mock인지 실제 장비인지 */
@@ -152,6 +161,10 @@ export interface Inspection {
   waferNo: number;
   capturedAt: number;
   map: WaferMap;
+  /** 지점별 측정값 — 없으면 구버전 기록 */
+  measurements?: (number | null)[];
+  metricId?: MetricId;
+  spec?: SpecSetting;
   verdict: Verdict;
   elapsedMs: number;
   source: 'mock' | 'device';
