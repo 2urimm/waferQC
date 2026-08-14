@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { FAMILIES, FAMILY_ORDER, type FamilyId } from '../config/taxonomy';
-import { PATTERN_LABEL } from '../domain/causes';
+import { PATTERN_LABEL, causeById } from '../domain/causes';
+import { CASE_STATUS_SHORT, causeStatus } from '../domain/caseStatus';
 import { METRICS, formatSpec } from '../domain/metrology';
 import { buildPlan } from '../domain/plan';
 import { ProcessTabs } from '../components/ProcessTabs';
@@ -35,7 +36,7 @@ export function History() {
     <div className="stack">
       <Card
         title="검사 이력"
-        sub={`${rows.length}건 / 전체 ${state.history.length}건 · 브라우저 로컬 저장 (실제로는 MES·DB에 붙어야 하는 자리)`}
+        sub={`${rows.length}건 / 전체 ${state.history.length}건 · 불량 대응 Log 대장에서 시드 (맵만 생성, 나머지는 대장 원본) · 브라우저 로컬 저장`}
         actions={
           <button className="btn btn-sm" onClick={reseedHistory} title="가상 이력을 다시 생성한다">
             시드 재생성
@@ -69,11 +70,13 @@ export function History() {
               <thead>
                 <tr>
                   <th>시각</th>
+                  <th>관리번호</th>
                   <th>로트</th>
                   <th className="num">W#</th>
                   <th>계통</th>
                   <th>최유력 패턴</th>
                   <th className="num">확률</th>
+                  <th>상태</th>
                   <th className="num">점검</th>
                 </tr>
               </thead>
@@ -89,6 +92,13 @@ export function History() {
                       style={{ background: on ? 'var(--surface-sunken)' : undefined }}
                     >
                       <td>{new Date(h.capturedAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      <td>
+                        {h.caseId ? (
+                          <span title={causeById(h.causeId ?? '')?.name ?? ''}>{h.caseId}</span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )}
+                      </td>
                       <td>{h.lotId}</td>
                       <td className="num">{h.waferNo}</td>
                       <td style={{ fontWeight: h.verdict.family === 'NORMAL' ? 400 : 600 }}>
@@ -96,6 +106,21 @@ export function History() {
                       </td>
                       <td>{top ? PATTERN_LABEL[top.id] : '—'}</td>
                       <td className="num">{top ? `${(top.probability * 100).toFixed(0)}%` : '—'}</td>
+                      <td>
+                        {(() => {
+                          const c = causeById(h.causeId ?? '');
+                          if (!c) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+                          const st = causeStatus(c);
+                          return (
+                            <span
+                              style={{ color: st.status === 'monitoring' ? 'var(--warning)' : undefined }}
+                              title={st.lastSeen ? `마지막 발생 ${st.lastSeen} · 지난 12개월 ${st.occurrences}회` : undefined}
+                            >
+                              {CASE_STATUS_SHORT[st.status]}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="num">{h.checkedActions.length || '—'}</td>
                     </tr>
                   );

@@ -1,4 +1,4 @@
-import type { ProcessId } from './causes';
+import { PROCESSES, type CauseEntry, type ProcessId } from './causes';
 
 /**
  * 공정별 계측지표.
@@ -427,122 +427,75 @@ export interface Verification {
   note?: string;
 }
 
-export const CAUSE_VERIFICATION: Record<string, Verification> = {
-  /* Center */
-  'center-static-cmp': {
-    metric: 'CMP_THK_MAP',
-    expect: '중심부 잔막 두께가 외곽 대비 낮으면 중앙 존 과연마, 높으면 저연마. 어느 쪽이든 중앙 존 압력이 설정에서 벗어난 것이다.',
-  },
-  'center-static-cvd': {
-    metric: 'THK',
-    expect: '중심부 두께가 외곽보다 두껍게 나오면 중앙 반응 과다가 맞다. 반대로 얇으면 가스 분배가 아니라 다른 원인을 봐야 한다.',
-  },
-  'center-static-etch': {
-    metric: 'CD_ETCH',
-    expect: '중심 측정 포인트의 CD가 스펙 하한을 밑돌면 과식각 확정. 전면 식각이라 패턴 CD가 없으면 Remaining Thickness로 대체.',
-  },
-  'center-aging-pecvd': {
-    metric: 'THK',
-    expect: '중심-외곽 두께차가 챔버 클리닝 이후 처리 매수에 따라 단조 증가하면 샤워헤드 막힘이 맞다. 매수와 무관하게 일정하면 정적 요인 쪽이다.',
-  },
-  'center-aging-cmp': {
-    metric: 'CMP_THK_MAP',
-    expect: '잔막 두께 맵이 중앙에서 움푹 들어간 Bowl 형상이면 패드 중앙 과다 마모가 맞다. 패드 프로파일 실측과 같이 볼 것.',
-  },
-  'center-spatial-etch': {
-    metric: 'CD_ETCH',
-    expect: 'CD 편차의 무게중심이 웨이퍼 기하 중심에서 한쪽으로 벗어나 있으면 편심. 벗어난 방위가 배기 포트 방향과 맞는지 확인.',
-  },
-
-  /* Donut */
-  'donut-static-diffusion': {
-    metric: 'RS',
-    expect: '중간 반경 지점의 Rs만 스펙에서 이탈하고 중심·최외곽은 정상이면 RTP 존 경계의 온도 구배가 맞다.',
-  },
-  'donut-static-clean': {
-    metric: 'PARTICLE',
-    expect: '잔류물이 중간 반경에 링 형태로 분포하면 린스 노즐 커버리지 부족이 맞다. 결함 맵의 링 반경과 노즐 스윕 범위를 대조할 것.',
-  },
-  'donut-static-photo': {
-    metric: 'PR_THK',
-    expect: 'PR 두께의 반경 방향 프로파일에 링 형태 이탈이 보이면 스핀 조건 문제. Ellipsometry 맵으로 링 반경을 특정할 것.',
-  },
-  'donut-aging-esc': {
-    metric: 'THK',
-    expect: 'ESC O-ring 배치 반경과 이탈 링의 반경이 일치하면 헬륨 누설이 맞다.',
-    note: '공통 설비라 전용 지표가 없다. 문제가 드러난 후속 공정(식각이면 CD, 증착이면 THK)의 주 진단지표로 확인한다.',
-  },
-  'donut-r2r-pecvd-fwe': {
-    metric: 'THK',
-    expect: '로트 첫 웨이퍼만 중간 반경 두께가 이탈하고 두 번째 이후는 정상이면 FWE 확정. 이게 첫 웨이퍼 효과의 결정적 서명이다.',
-  },
-
-  /* Edge-Ring */
-  'edgering-static-pecvd-flow': {
-    metric: 'THK',
-    expect: '에지 3mm / 5mm 포인트의 두께만 중심 대비 이탈하면 외곽 가스 분배 문제.',
-  },
-  'edgering-static-pecvd-rf': {
-    metric: 'THK',
-    expect: '외곽 두께가 낮고 반사파 로그가 같이 상승해 있으면 RF 매칭 쪽. 도전막이면 Sheet Resistance로도 교차 확인 가능.',
-  },
-  'edgering-static-photo-ebr': {
-    metric: 'PR_THK',
-    expect: '에지 영역에 PR이 남아 있으면(EBR 폭 부족) 확정. 실측 EBR 폭과 설정값의 차이를 같이 잴 것.',
-  },
-  'edgering-aging-focusring': {
-    metric: 'CD_ETCH',
-    expect: '에지 포인트의 CD가 링 교체 이후 처리 매수에 따라 단조 이동하면 링 침식이 맞다. 교체 직후 값으로 되돌아오는지가 확인 사격이다.',
-  },
-  'edgering-spatial-rtp': {
-    metric: 'RS',
-    expect: '반경 방향 Rs 프로파일에서 이탈 구간이 어느 반경에 서는지 확인. 최외곽이면 Edge-Ring, 중간이면 Donut 쪽이다.',
-  },
-  'edgering-r2r-fluorine': {
-    metric: 'CD_ETCH',
-    expect: '같은 로트 안에서 뒤 순번 웨이퍼일수록 에지 CD 이탈이 커지면 벽면 잔여물 탈착이 맞다. 클리닝 직후 웨이퍼는 정상이어야 한다.',
-  },
-
-  /* Edge-Loc */
-  'edgeloc-aging-esc-he': {
-    metric: 'PR_THK',
-    expect: '누설 추정 지점 부근에서만 PR 두께가 무너져 있으면 국부 냉각 실패가 맞다. 붕괴가 심하면 Pattern Collapse(SEM)로 확인하되 웨이퍼를 소모한다.',
-  },
-  'edgeloc-spatial-gatedoor': {
-    metric: 'PARTICLE',
-    expect: '파티클 맵의 분포가 노치 기준 6시 방향 외곽에 몰리고, 그 위치가 로트마다 재현되면 사실상 확정.',
-    note: '공통 설비지만 확인은 세정 공정의 파티클 검사 설비로 한다.',
-  },
-
-  /* Scratch */
-  'scratch-spatial-robotarm': {
-    metric: 'SCRATCH_COUNT',
-    expect: 'DF 검사에서 스크래치의 방향이 암 삽입 궤적과 평행하고 시작점이 6시 에지면 확정. CMP 슬러리 기인 스크래치는 방향이 무작위라 여기서 갈린다.',
-    note: '공통 설비지만 스크래치 계수 자체는 CMP 라인의 DF Inspection으로 한다.',
-  },
-
-  /* Near-full */
-  'nearfull-static-esc': {
-    metric: 'COLLAPSE',
-    expect: 'PR이 전면에 걸쳐 무너져 있으면 냉각 실패가 맞다. 다만 단면 SEM은 웨이퍼를 소모하므로, 먼저 척 냉각수·He 압력 알람 로그로 배제할 것.',
-    note: '공통 설비라 전용 지표가 없다. 세정 공정의 Pattern Collapse 검사를 빌려 쓴다.',
-  },
-  'nearfull-r2r-cmp-pad': {
-    metric: 'CMP_THK_MAP',
-    expect: '패드 사용 시간별 잔막 두께를 모으면 제거율이 초기 저조 → 중반 정상 → 후반 저하의 비단조 곡선을 그린다. 현재 패드가 어느 구간에 있는지가 답이다.',
-  },
-};
-
 /** 확인 계측 — 지표 id를 실제 Metric으로 풀어서 돌려준다 */
 export interface ResolvedVerification extends Omit<Verification, 'metric'> {
   metricId: MetricId;
   metric: Metric;
 }
 
-export function verificationOf(causeId: string): ResolvedVerification | undefined {
-  const v = CAUSE_VERIFICATION[causeId];
-  if (!v) return undefined;
-  return { metricId: v.metric, metric: METRICS[v.metric], expect: v.expect, note: v.note };
+/** 공백·대소문자를 지워 로그 표기와 METRICS.method를 견주기 좋게 만든다 */
+function normMethod(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, '');
+}
+
+function findByMethod(method: string, process?: ProcessId): Metric | undefined {
+  const want = normMethod(method);
+  const pool = METRIC_ORDER.map((id) => METRICS[id]).filter((m) => !process || m.process === process);
+  return pool.find((m) => {
+    const have = normMethod(m.method);
+    return have === want || have.includes(want) || want.includes(have);
+  });
+}
+
+/**
+ * 원인 → 확인 계측.
+ *
+ * 예전에는 원인 id마다 손으로 적은 표를 뒀는데, 그 표의 "이 원인이면 계측이 이렇게 나온다"는
+ * 문장은 우리가 지어낸 것이었다. 지금은 그럴 필요가 없다 — 엑셀 개선안의 **웨이퍼맵 형태**가
+ * 정확히 그 문장이고(예: "중심부의 박막 두께(THK)가 Spec보다 커서 불량으로 분류된 형태"),
+ * 어떤 계측으로 확인했는지는 대응 Log의 **계측 방법**에 실제 기록이 있다.
+ * 그래서 둘을 그대로 쓰고, 이 함수는 로그의 계측 방법 문자열을 METRICS의 지표로 풀어주기만 한다.
+ *
+ * 푸는 순서:
+ *   1) 같은 공정 안에서 method가 일치하는 지표
+ *   2) 다른 공정의 지표라도 method가 일치하면 그걸 빌려 쓴다 (파티클 검사처럼 공정 전용
+ *      지표가 없는 경우 — 예: Diffusion의 DF Inspection은 세정 공정의 Particle 지표로 본다)
+ *   3) 검사 계열 키워드로 넘겨받기
+ *   4) 그래도 없으면 해당 공정의 주 진단지표
+ */
+export function verificationOf(cause: CauseEntry): ResolvedVerification | undefined {
+  const expect = cause.waferMap;
+  if (!expect) return undefined;
+
+  const logged = cause.metrology;
+  let metric: Metric | undefined;
+  let note: string | undefined;
+
+  if (logged) {
+    metric = findByMethod(logged, cause.process);
+    if (!metric) {
+      metric = findByMethod(logged);
+      if (metric) {
+        note = `이 공정에는 ${logged}에 대응하는 전용 지표가 없어 ${PROCESSES[metric.process].label}의 ${metric.label}를 빌려 쓴다.`;
+      }
+    }
+    if (!metric && /inspection/i.test(logged)) {
+      metric = METRICS.PARTICLE;
+      note = `대응 Log의 계측은 ${logged}다. 결함 계수 계열이라 세정 공정의 ${METRICS.PARTICLE.label}로 본다.`;
+    }
+  }
+
+  if (!metric) {
+    metric = primaryMetricOf(cause.process);
+    if (metric) {
+      note = logged
+        ? `대응 Log에는 ${logged}로 확인했다고 되어 있으나 대응하는 지표가 정의되어 있지 않아 주 진단지표로 대신한다.`
+        : '대응 Log에 계측 방법 기록이 없어 주 진단지표로 대신한다.';
+    }
+  }
+
+  if (!metric) return undefined;
+  return { metricId: metric.id, metric, expect, note };
 }
 
 /**

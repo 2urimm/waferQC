@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  DISRUPTION_LABEL,
-  FACTOR_META,
-  PATTERN_LABEL,
-  PROCESSES,
-  type ProcessId,
-} from '../domain/causes';
+import { CASE_STATUS_SHORT, explainStatus } from '../domain/caseStatus';
+import { PATTERN_LABEL, PROCESSES, type ProcessId } from '../domain/causes';
 import { METRIC_FORM_LABEL, measurementSec, primaryMetricOf, verificationOf } from '../domain/metrology';
 import type { DiagnosisPlan, RankedCause } from '../domain/plan';
 import { manualsForCause } from '../services/manuals';
@@ -65,7 +60,7 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
   return (
     <Card
       title="공정별 원인 추적"
-      sub={`연관도 순 · 총 예상 ${plan.totalEtaMin}분 · 지금 확인 가능 ${plan.immediateCount}건 / 이력 대조 필요 ${plan.historyCount}건`}
+      sub={`연관도 순 · 지난 12개월 발생 ${plan.totalOccurrences}건 · 이번 방위로 대조 가능 ${plan.immediateCount}건 / 설비 배치 실측 필요 ${plan.layoutCount}건`}
     >
       {/* 탭 스트립 */}
       <div className="row" style={{ gap: 6, marginBottom: 14 }} role="tablist" aria-label="원인 공정">
@@ -104,8 +99,15 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
           {tab.rank}순위 · {tab.meta.label}
         </h3>
         <Badge>연관도 {pct(tab.relevance)}</Badge>
-        <Badge>요인 축 {tab.factorSpread}종</Badge>
-        <Badge>예상 {tab.totalEtaMin}분</Badge>
+        <Badge>원인 {tab.causes.length}건</Badge>
+        <Badge title="이 공정의 해당 원인들이 지난 12개월 대응 Log에 기록된 총 발생 건수">
+          이력 {tab.occurrences}건
+        </Badge>
+        {tab.monitoringCount > 0 && (
+          <Badge color="--warning" title="대응 Log에 '모니터링 중 (효과검증 진행)'으로 기록된 원인">
+            효과검증 중 {tab.monitoringCount}건
+          </Badge>
+        )}
         <Badge color={cls === 'restricted' ? '--critical' : cls === 'confidential' ? '--warning' : undefined}>
           {CLASSIFICATION_META[cls].label}
         </Badge>
@@ -146,10 +148,27 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
               maskNote={maskReason(user, tab.process)}
               checked={checkedActions}
               onToggle={onToggle}
-              onAudit={() => onAudit(`${tab.meta.label} / ${c.equipment}`, tab.process)}
+              onAudit={() => onAudit(`${tab.meta.label} / ${c.name}`, tab.process)}
             />
           ))}
         </div>
+      )}
+
+      {tab.exclusions.length > 0 && (
+        <>
+          <div className="divider" style={{ margin: '16px 0 10px' }} />
+          <div className="card-sub" style={{ marginBottom: 6 }}>
+            이 공정이 이번 후보 유형을 유발하지 않는다고 본 근거
+          </div>
+          <div className="stack" style={{ gap: 6 }}>
+            {tab.exclusions.map((e) => (
+              <div key={e.pattern} className="section-note" style={{ color: 'var(--text-muted)' }}>
+                <strong style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{PATTERN_LABEL[e.pattern]}</strong>{' '}
+                {e.reason}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {plan.processesWithoutMapping.length > 0 && (
@@ -189,33 +208,37 @@ function CauseCard({
   onAudit: () => void;
 }) {
   const manuals = manualsForCause(cause.id);
-  const verification = verificationOf(cause.id);
-  const doneCount = cause.actionable.checks.filter((_, i) => checked.includes(`${cause.id}#${i}`)).length;
-  const allDone = doneCount === cause.actionable.checks.length && cause.actionable.checks.length > 0;
+  const verification = verificationOf(cause);
+  const doneCount = cause.resolution.filter((_, i) => checked.includes(`${cause.id}#${i}`)).length;
+  const allDone = doneCount === cause.resolution.length && cause.resolution.length > 0;
 
   return (
     <div className={`action${allDone ? ' done' : ''}`}>
       <div className="action-head">
         <span className="action-rank">{index}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="action-target">{cause.equipment}</div>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{cause.cause}</div>
+          <div className="action-target">{cause.name}</div>
 
           <div className="action-meta">
-            <Badge title={FACTOR_META[cause.factor].hint}>{FACTOR_META[cause.factor].label}</Badge>
+            <Badge title="엑셀 개선안의 불량 유형 번호 — ①이 그 공정의 대표 유형이다">
+              유형 {cause.variant === 1 ? '①' : '②'}
+            </Badge>
             <Badge>
               {PATTERN_LABEL[cause.pattern]} {pct(cause.patternProbability)}
             </Badge>
-            <Badge color={cause.actionable.disruption === 'high' ? '--warning' : undefined}>
-              {DISRUPTION_LABEL[cause.actionable.disruption]} · {cause.actionable.etaMin}분
-            </Badge>
+            {cause.occurrences > 0 && (
+              <Badge title={`대응 Log 관리번호 ${cause.logIds.join(', ')}`}>
+                12개월 {cause.occurrences}회
+              </Badge>
+            )}
             {cause.support === 'strong' && (
               <Badge color="--good" strong>
                 ✔ 이번 측정이 지지
               </Badge>
             )}
             {cause.support === 'weak' && <Badge color="--serious">△ 측정과 불일치</Badge>}
-            {cause.needsHistory && <Badge>⏱ 이력 대조 필요</Badge>}
+            {cause.needsLayout && <Badge>⚙ 설비 배치 실측 필요</Badge>}
+            {cause.caseState.status === 'monitoring' && <Badge color="--warning">효과검증 중</Badge>}
           </div>
         </div>
       </div>
@@ -226,11 +249,22 @@ function CauseCard({
         {cause.mechanism.join('  →  ')}
       </div>
 
-      {cause.spatialSignature && (
+      <div className="action-rationale" style={{ marginTop: 4 }}>
+        <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>웨이퍼맵 형태</strong>
+        {'  '}
+        {cause.waferMap}
+      </div>
+
+      {cause.directional && (
         <div className="action-rationale" style={{ marginTop: 4 }}>
-          <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>방향성 서명</strong>
+          <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>방향성</strong>
           {'  '}
-          {cause.spatialSignature}
+          {cause.directional.label}
+          {cause.directional.kind === 'layout' && (
+            <span style={{ color: 'var(--text-muted)' }}>
+              {'  '}— 각도가 설비 배치에 달려 있어 실측 wafer map 없이는 방위를 못 박는다
+            </span>
+          )}
         </div>
       )}
 
@@ -284,10 +318,10 @@ function CauseCard({
 
           <div style={{ marginTop: 10 }}>
             <div className="card-sub" style={{ marginBottom: 4 }}>
-              확인 항목 {cause.actionable.checks.length > 0 && `(${doneCount}/${cause.actionable.checks.length})`}
+              해결 · 즉시 대응 {cause.resolution.length > 0 && `(${doneCount}/${cause.resolution.length})`}
             </div>
             <div className="stack" style={{ gap: 3 }}>
-              {cause.actionable.checks.map((chk, i) => {
+              {cause.resolution.map((chk, i) => {
                 const id = `${cause.id}#${i}`;
                 return (
                   <label className="check" key={id}>
@@ -308,13 +342,14 @@ function CauseCard({
 
           <div style={{ marginTop: 10 }}>
             <div className="card-sub" style={{ marginBottom: 4 }}>
-              개선안
-              {cause.actionable.draft && (
-                <span style={{ color: 'var(--serious)' }}> · 초안 (원본 표에 없어 이쪽에서 채운 것 — 검토 필요)</span>
-              )}
+              개선 · 재발방지
+              <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
+                {' '}
+                — 오늘 하는 일이 아니라 공정 담당이 계획을 잡을 것
+              </span>
             </div>
             <ul className="action-checks">
-              {cause.actionable.remedy.map((r) => (
+              {cause.improvement.map((r) => (
                 <li key={r}>{r}</li>
               ))}
             </ul>
@@ -331,12 +366,13 @@ function CauseCard({
             </div>
           )}
 
-          {cause.note && (
-            <div className="caveat" style={{ marginTop: 10 }}>
-              <span className="caveat-icon" aria-hidden>?</span>
-              <div>
-                <strong>원본 표 확인 필요</strong> — {cause.note}
-              </div>
+          {cause.logIds.length > 0 && (
+            <div className="section-note" style={{ marginTop: 10, color: 'var(--text-muted)' }}>
+              대응 Log {cause.logIds.join(', ')} · 지난 12개월 {cause.occurrences}회 기록
+              {cause.metrology && ` · 확인 계측 ${cause.metrology}`}
+              {cause.lastSeen && ` · 마지막 ${cause.lastSeen}`} · 상태{' '}
+              {CASE_STATUS_SHORT[cause.caseState.status]}
+              <div style={{ marginTop: 3 }}>{explainStatus(cause.caseState)}</div>
             </div>
           )}
         </>

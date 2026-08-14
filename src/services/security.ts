@@ -63,7 +63,6 @@ export const PROCESS_CLASSIFICATION: Record<ProcessId, Classification> = {
   ETCH: 'restricted',
   CLEANING: 'internal',
   CMP: 'confidential',
-  COMMON: 'internal',
 };
 
 export interface User {

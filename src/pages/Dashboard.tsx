@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { FAMILIES, FAMILY_ORDER } from '../config/taxonomy';
-import { CAUSE_MATRIX, PATTERN_LABEL, PATTERN_ORDER, entriesNeedingReview, patternsWithoutCauses } from '../domain/causes';
+import { CAUSE_MATRIX, PATTERN_LABEL, PATTERN_ORDER, layoutDependentCauses, monitoringCauses, patternsWithoutCauses } from '../domain/causes';
 import { ColumnChart, LineChart } from '../components/charts';
 import { WaferGrid } from '../components/WaferGrid';
 import { Badge, Card, Empty, Stat } from '../components/ui';
@@ -44,7 +44,8 @@ export function Dashboard() {
   }));
 
   const unmapped = patternsWithoutCauses();
-  const needsReview = entriesNeedingReview();
+  const monitoring = monitoringCauses();
+  const layoutDependent = layoutDependentCauses();
 
   if (!history.length) {
     return (
@@ -84,7 +85,7 @@ export function Dashboard() {
           />
         </Card>
 
-        <Card title="지식베이스 상태" sub="원인 매트릭스 채움 정도">
+        <Card title="지식베이스 상태" sub="엑셀 개선안 · 대응 Log에서 생성된 원인 매트릭스">
           <dl className="kv">
             <dt>등재된 원인</dt>
             <dd>{CAUSE_MATRIX.length}건</dd>
@@ -92,10 +93,12 @@ export function Dashboard() {
             <dd>
               {PATTERN_ORDER.length - 1 - unmapped.length} / {PATTERN_ORDER.length - 1}
             </dd>
-            <dt>개선안 초안</dt>
-            <dd>{CAUSE_MATRIX.filter((c) => c.actionable.draft).length}건</dd>
-            <dt>확인 필요</dt>
-            <dd>{needsReview.length}건</dd>
+            <dt>지난 12개월 발생</dt>
+            <dd>{CAUSE_MATRIX.reduce((s, c) => s + c.occurrences, 0)}건</dd>
+            <dt title="대응 Log에 '모니터링 중'으로 기록된 원인">효과검증 중</dt>
+            <dd>{monitoring.length}건</dd>
+            <dt>설비 배치 실측 필요</dt>
+            <dd>{layoutDependent.length}건</dd>
           </dl>
 
           {unmapped.length > 0 && (

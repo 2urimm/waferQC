@@ -1,6 +1,7 @@
 import { REVIEW_REASON_COPY } from '../config/model';
 import { CONFIDENCE_COPY, FAMILIES, confidenceBand, unresolvedPairsFor } from '../config/taxonomy';
-import { DISRUPTION_LABEL, FACTOR_META, PATTERN_LABEL } from '../domain/causes';
+import { CASE_STATUS_LABEL, explainStatus } from '../domain/caseStatus';
+import { PATTERN_LABEL } from '../domain/causes';
 import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
 import { manualsForCause } from './manuals';
@@ -158,8 +159,8 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
   L.push(`## 4. 공정별 점검 순서`);
   L.push('');
   L.push(
-    `연관도 순이다. 같은 공정 안에서는 확인 비용이 싼 것(무정지 로그 조회)을 앞에 두었다. ` +
-      `총 예상 소요 ${plan.totalEtaMin}분, 지금 확인 가능 ${plan.immediateCount}건 · 이력 대조 필요 ${plan.historyCount}건.`,
+    `연관도 순이다. 같은 공정 안에서는 엑셀 개선안의 대표 유형(①)과 지난 12개월 재발 빈도를 앞에 두었다. ` +
+      `지난 12개월 발생 ${plan.totalOccurrences}건, 이번 방위로 대조 가능 ${plan.immediateCount}건 · 설비 배치 실측 필요 ${plan.layoutCount}건.`,
   );
   L.push('');
 
@@ -170,7 +171,7 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
     L.push(`### ${tab.rank}순위 · ${tab.meta.label}`);
     L.push('');
     L.push(
-      `연관도 ${pct(tab.relevance)} · 요인 축 ${tab.factorSpread}종 · 예상 ${tab.totalEtaMin}분 · ` +
+      `연관도 ${pct(tab.relevance)} · 원인 ${tab.causes.length}건 · 지난 12개월 ${tab.occurrences}건 발생 · ` +
         `기밀 ${CLASSIFICATION_META[cls].short}`,
     );
     L.push('');
@@ -185,18 +186,23 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
     const detail = canSeeDetail(user, tab.process);
 
     for (const c of tab.causes) {
-      L.push(`#### ${c.equipment} — ${c.cause}`);
+      L.push(`#### ${c.name}`);
       L.push('');
       L.push(
-        `- 요인 축: ${FACTOR_META[c.factor].label} · 대상 패턴: ${PATTERN_LABEL[c.pattern]} (${pct(c.patternProbability)})`,
+        `- 불량 유형 ${c.variant === 1 ? '①' : '②'} · 대상 패턴: ${PATTERN_LABEL[c.pattern]} (${pct(c.patternProbability)})`,
       );
       L.push(`- 기전: ${c.mechanism.join(' → ')}`);
-      if (c.spatialSignature) L.push(`- 방향성 서명: ${c.spatialSignature}`);
+      L.push(`- 웨이퍼맵 형태: ${c.waferMap}`);
+      if (c.directional) L.push(`- 방향성: ${c.directional.label}`);
       if (c.supportNote) {
         const mark = c.support === 'strong' ? '✔ 이번 측정이 지지' : c.support === 'weak' ? '△ 이번 측정과 불일치' : 'ℹ';
         L.push(`- ${mark}: ${c.supportNote}`);
       }
-      if (c.needsHistory) L.push(`- ⏱ 웨이퍼 한 장으로는 확인 불가 — 이력/로트 순번 대조 필요`);
+      if (c.needsLayout) L.push(`- ⚙ 방위만으로는 확인 불가 — 각도가 설비 배치에 달려 있어 실측 wafer map 대조 필요`);
+      if (c.logIds.length) {
+        L.push(`- 대응 이력: ${c.logIds.join(', ')} · 지난 12개월 ${c.occurrences}회 · 마지막 ${c.lastSeen ?? '—'}`);
+        L.push(`- 상태: ${CASE_STATUS_LABEL[c.caseState.status]} — ${explainStatus(c.caseState)}`);
+      }
       L.push('');
 
       if (!detail) {
@@ -206,13 +212,13 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
         continue;
       }
 
-      L.push(`**확인 항목** (예상 ${c.actionable.etaMin}분 · ${DISRUPTION_LABEL[c.actionable.disruption]})`);
+      L.push(`**해결 · 즉시 대응**`);
       L.push('');
-      for (const chk of c.actionable.checks) L.push(`- [ ] ${chk}`);
+      for (const chk of c.resolution) L.push(`- [ ] ${chk}`);
       L.push('');
-      L.push(`**개선안**${c.actionable.draft ? ' *(초안 — 검토 필요)*' : ''}`);
+      L.push(`**개선 · 재발방지** *(공정 담당 계획 사항)*`);
       L.push('');
-      for (const r of c.actionable.remedy) L.push(`- ${r}`);
+      for (const r of c.improvement) L.push(`- ${r}`);
 
       const manuals = manualsForCause(c.id);
       if (manuals.length) {
@@ -223,10 +229,6 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
           L.push(`- ${m.title} (${m.revision}) — ${m.section ?? '전체'}`);
           L.push(`  - \`${m.path}\``);
         }
-      }
-      if (c.note) {
-        L.push('');
-        L.push(`> 원본 표 확인 필요: ${c.note}`);
       }
       L.push('');
     }

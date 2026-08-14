@@ -1,7 +1,7 @@
 import { GRID_COLS, GRID_ROWS } from '../config/hardware';
 import { CELL_DEFECT, CELL_NORMAL, CELL_OUTSIDE, REVIEW_REASON_COPY } from '../config/model';
 import { CONFIDENCE_COPY, FAMILIES, confidenceBand } from '../config/taxonomy';
-import { DISRUPTION_LABEL, FACTOR_META, PATTERN_LABEL } from '../domain/causes';
+import { PATTERN_LABEL } from '../domain/causes';
 import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
 import {
@@ -357,7 +357,7 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
   c.y += 2;
   text(
     c,
-    `연관도 순 · 총 예상 ${plan.totalEtaMin}분 · 지금 확인 가능 ${plan.immediateCount}건 / 이력 대조 필요 ${plan.historyCount}건`,
+    `연관도 순 · 지난 12개월 발생 ${plan.totalOccurrences}건 · 이번 방위로 대조 ${plan.immediateCount}건 / 배치 실측 필요 ${plan.layoutCount}건`,
     PAD,
     12,
     C.muted,
@@ -374,7 +374,8 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
     const hw = g.measureText(`${tab.rank}. ${tab.meta.label}`).width;
     let hx = PAD + hw + 12;
     hx = badge(g, `연관도 ${pct(tab.relevance)}`, hx, c.y - 4, C.deemph);
-    hx = badge(g, `${tab.totalEtaMin}분`, hx, c.y - 4, C.deemph);
+    hx = badge(g, `원인 ${tab.causes.length}건`, hx, c.y - 4, C.deemph);
+    hx = badge(g, `이력 ${tab.occurrences}건`, hx, c.y - 4, C.deemph);
     if (cls !== 'internal') badge(g, CLASSIFICATION_META[cls].label, hx, c.y - 4, cls === 'restricted' ? C.critical : C.warning, true);
     c.y += 22;
 
@@ -390,16 +391,17 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
     for (const cause of tab.causes.slice(0, 2)) {
       g.font = font(13, 600);
       g.fillStyle = C.ink;
-      g.fillText(`· ${cause.equipment}`, PAD + 14, c.y);
-      const cw = g.measureText(`· ${cause.equipment}`).width;
+      g.fillText(`· ${cause.name}`, PAD + 14, c.y);
+      const cw = g.measureText(`· ${cause.name}`).width;
       let cx = PAD + 14 + cw + 10;
-      cx = badge(g, FACTOR_META[cause.factor].short, cx, c.y - 4, C.deemph);
-      cx = badge(g, `${DISRUPTION_LABEL[cause.actionable.disruption]} ${cause.actionable.etaMin}분`, cx, c.y - 4, C.deemph);
+      cx = badge(g, `유형 ${cause.variant === 1 ? '①' : '②'}`, cx, c.y - 4, C.deemph);
+      if (cause.occurrences > 0) cx = badge(g, `12개월 ${cause.occurrences}회`, cx, c.y - 4, C.deemph);
       if (cause.support === 'strong') badge(g, '측정이 지지', cx, c.y - 4, C.good, true);
-      else if (cause.needsHistory) badge(g, '이력 대조 필요', cx, c.y - 4, C.deemph);
+      else if (cause.needsLayout) badge(g, '배치 실측 필요', cx, c.y - 4, C.deemph);
+      if (cause.caseState.status === 'monitoring') badge(g, '효과검증 중', cx, c.y - 4, C.warning);
       c.y += 19;
 
-      text(c, cause.cause, PAD + 26, 12, C.ink2, 400, W - PAD * 2 - 40);
+      text(c, cause.waferMap, PAD + 26, 12, C.ink2, 400, W - PAD * 2 - 40);
 
       if (cause.supportNote && cause.support === 'strong') {
         text(c, cause.supportNote, PAD + 26, 11.5, C.muted, 400, W - PAD * 2 - 40);
@@ -407,9 +409,9 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
 
       if (!detail) {
         maskedCount += 1;
-        text(c, '확인 항목·개선안은 권한 제한으로 가려졌습니다.', PAD + 26, 11.5, C.serious, 400, W - PAD * 2 - 40);
+        text(c, '해결·개선 항목은 권한 제한으로 가려졌습니다.', PAD + 26, 11.5, C.serious, 400, W - PAD * 2 - 40);
       } else {
-        for (const chk of cause.actionable.checks.slice(0, 3)) {
+        for (const chk of cause.resolution.slice(0, 3)) {
           text(c, `☐ ${chk}`, PAD + 26, 11.5, C.ink2, 400, W - PAD * 2 - 40);
         }
       }

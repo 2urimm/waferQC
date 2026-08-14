@@ -84,7 +84,7 @@ for (const preset of PATTERN_PRESETS) {
     }`,
   );
   const strong = plan.tabs.flatMap((t) => t.causes).filter((c) => c.support === 'strong');
-  if (strong.length) console.log(`      지지  ${strong.map((c) => c.equipment).join(', ')}`);
+  if (strong.length) console.log(`      지지  ${strong.map((c) => c.name).join(', ')}`);
 }
 
 console.log(`\n${failures === 0 ? '전부 통과' : `${failures}건 실패`}\n`);

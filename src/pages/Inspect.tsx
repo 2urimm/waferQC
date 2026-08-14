@@ -149,7 +149,7 @@ export function Inspect() {
                   onChange={(e) => setProcess(e.target.value as ProcessId)}
                   disabled={scanning}
                 >
-                  {PROCESS_ORDER.filter((p) => p !== 'COMMON').map((p) => (
+                  {PROCESS_ORDER.map((p) => (
                     <option key={p} value={p}>
                       {PROCESSES[p].label}
                     </option>

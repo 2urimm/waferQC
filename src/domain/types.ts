@@ -179,6 +179,10 @@ export interface FeatureDriver {
 /** 한 번의 검사 기록 */
 export interface Inspection {
   id: string;
+  /** 불량 대응 Log의 관리번호 — 대장에서 온 시드 기록에만 있다 */
+  caseId?: string;
+  /** 대장이 지목한 원인 (CAUSE_MATRIX id) */
+  causeId?: string;
   lotId: string;
   waferNo: number;
   capturedAt: number;
