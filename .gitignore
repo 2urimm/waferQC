@@ -5,10 +5,10 @@ dist/
 .DS_Store
 *.tsbuildinfo
 
-# 팀에서 받은 모델 패키지(backend/) — 체크포인트(.pt)와 venv가 수백 MB라 git에 넣지 않는다.
+# 팀에서 받은 모델 패키지 — 체크포인트(.pt)와 venv가 수백 MB라 git에 넣지 않는다.
 # 모델 파일은 별도로 공유하고, 이 저장소는 UI 소스와 data/ 원본만 담는다.
+# 폴더·파일 이름은 받은 그대로 둔다 (backend/wafer_final_package).
 backend/
-wafer_final_package.zip
 *.pt
 *.zip
 

@@ -138,15 +138,17 @@ python scripts/gen_from_xlsx.py
 
 ## 구조
 
-세 덩어리로 나눠 둔다. **`data/`는 팀원이 준 원본**이라 코드에서 절대 고치지 않고,
-`backend/`는 팀에서 받은 모델 패키지(git 제외), 나머지가 이 저장소가 만드는 프론트엔드다.
+**팀에서 받은 것은 손대지 않는다.** `data/`의 엑셀 원본과 `backend/wafer_final_package/`의
+모델 패키지가 그것이고, 내용은 물론 **파일·폴더 이름도 받은 그대로** 둔다. 위치만 옮겼다.
+나머지가 이 저장소가 만드는 프론트엔드다.
 
 ```
-data/            ★ 팀원 제공 원본 (읽기 전용)
+data/                  ★ 팀원 제공 원본 (읽기 전용)
   반도체 불량 분석 개선안.xlsx
   불량 대응 log.xlsx
-backend/         팀 제공 모델 패키지 — serve.py · models/ · .venv (git 제외)
-docs/            연동 절차 · 모델 계약
+backend/
+  wafer_final_package/ ★ 팀 제공 모델 패키지 — serve.py · models/ · .venv (git 제외)
+docs/                  연동 절차 · 모델 계약
 src/
   config/
     hardware.ts    74HC595 / CD4067 / ADC 상수, 타이밍 예산, 전압→셀 변환
