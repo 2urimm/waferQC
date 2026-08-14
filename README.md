@@ -13,6 +13,7 @@
 ## 실행
 
 ```bash
+cd UI/frontend
 npm install
 npm run dev
 ```
@@ -77,14 +78,14 @@ http://127.0.0.1:5180 — 실제 보드 없이 **가상 장치**로 전 구간�
 | `data/반도체 불량 분석 개선안.xlsx` | 공정(6) × 결함유형(8) × 불량 유형(①②) → **원인 / 해결 / 개선** |
 | `data/불량 대응 log.xlsx` | 2025-08 ~ 2026-08 대응 이력 315건 (92종 × 2~5회 재발) |
 
-`scripts/gen_from_xlsx.py`가 이 둘을 읽어 아래 두 파일을 생성한다.
+`UI/frontend/scripts/gen_from_xlsx.py`가 이 둘을 읽어 아래 두 파일을 생성한다.
 
 ```bash
-python scripts/gen_from_xlsx.py
+cd UI/frontend && python scripts/gen_from_xlsx.py
 ```
 
-- `src/domain/causeMatrix.generated.ts` — 원인 69건 + 유발근거 서술 4건
-- `src/services/historySeed.generated.ts` — 대응 이력 315건
+- `UI/frontend/src/domain/causeMatrix.generated.ts` — 원인 69건 + 유발근거 서술 4건
+- `UI/frontend/src/services/historySeed.generated.ts` — 대응 이력 315건
 
 > **엑셀은 절대 코드에서 수정하지 않는다.** 내용이 틀렸으면 엑셀을 고치고 스크립트를 다시 돌린다.
 > 생성된 `*.generated.ts`도 직접 손대지 말 것 — 다음 생성 때 덮어써진다.
@@ -138,17 +139,19 @@ python scripts/gen_from_xlsx.py
 
 ## 구조
 
-**팀에서 받은 것은 손대지 않는다.** `data/`의 엑셀 원본과 `backend/wafer_final_package/`의
-모델 패키지가 그것이고, 내용은 물론 **파일·폴더 이름도 받은 그대로** 둔다. 위치만 옮겼다.
-나머지가 이 저장소가 만드는 프론트엔드다.
+앱은 `UI/` 아래에 프론트·백을 함께 두고, **팀에서 받은 것은 밖으로 뺐다.**
+`data/`의 엑셀 원본과 `UI/backend/wafer_final_package/`의 모델 패키지가 그것이고,
+내용은 물론 **파일·폴더 이름도 받은 그대로** 둔다 — 위치만 옮겼다.
 
 ```
-data/                  ★ 팀원 제공 원본 (읽기 전용)
+data/                    ★ 팀원 제공 원본 (읽기 전용)
   반도체 불량 분석 개선안.xlsx
   불량 대응 log.xlsx
-backend/
-  wafer_final_package/ ★ 팀 제공 모델 패키지 — serve.py · models/ · .venv (git 제외)
-docs/                  연동 절차 · 모델 계약
+docs/                    연동 절차 · 모델 계약
+UI/
+  backend/
+    wafer_final_package/ ★ 팀 제공 모델 패키지 — serve.py · models/ · .venv (git 제외)
+  frontend/              ↓ 이 저장소가 만드는 것
 src/
   config/
     hardware.ts    74HC595 / CD4067 / ADC 상수, 타이밍 예산, 전압→셀 변환

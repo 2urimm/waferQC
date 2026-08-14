@@ -8,13 +8,15 @@
     src/domain/causeMatrix.generated.ts
     src/services/historySeed.generated.ts
 
-  사용:  python scripts/gen_from_xlsx.py
+  사용:  UI/frontend 에서  python scripts/gen_from_xlsx.py
 """
 import openpyxl, re, json, sys, io, os, collections, datetime
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+# ROOT = UI/frontend (생성물이 들어갈 곳), REPO = 저장소 루트 (data/가 있는 곳)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA = os.path.join(ROOT, 'data')
+REPO = os.path.dirname(os.path.dirname(ROOT))
+DATA = os.path.join(REPO, 'data')
 IMP = os.path.join(DATA, '반도체 불량 분석 개선안.xlsx')
 LOG = os.path.join(DATA, '불량 대응 log.xlsx')
 
