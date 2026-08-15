@@ -1,28 +1,15 @@
 import { useEffect, useState } from 'react';
 import { CASE_STATUS_SHORT, explainStatus } from '../domain/caseStatus';
 import { PATTERN_LABEL, PROCESSES, type ProcessId } from '../domain/causes';
-import { METRIC_FORM_LABEL, measurementSec, primaryMetricOf, verificationOf } from '../domain/metrology';
 import type { DiagnosisPlan, RankedCause } from '../domain/plan';
-import { manualsForCause } from '../services/manuals';
-import {
-  CLASSIFICATION_META,
-  PROCESS_CLASSIFICATION,
-  ROLE_META,
-  canSeeCause,
-  canSeeDetail,
-  maskReason,
-  type User,
-} from '../services/security';
 import { Badge, Card } from './ui';
 
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 
 interface Props {
   plan: DiagnosisPlan;
-  user: User;
   checkedActions: string[];
   onToggle: (actionId: string) => void;
-  onAudit: (target: string, process: ProcessId) => void;
 }
 
 /**
@@ -32,7 +19,7 @@ interface Props {
  * 다만 매핑이 없는 공정도 하단에 이름은 남겨 둔다. 안 보이는 것과 "배제되었다"는 건
  * 다르고, 지식베이스가 아직 안 채워진 공정을 배제된 것으로 읽으면 위험하기 때문이다.
  */
-export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: Props) {
+export function ProcessTabs({ plan, checkedActions, onToggle }: Props) {
   const [active, setActive] = useState<ProcessId | null>(plan.tabs[0]?.process ?? null);
 
   // 판정이 바뀌면 1순위 공정으로 되돌린다
@@ -53,9 +40,6 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
   }
 
   const tab = plan.tabs.find((t) => t.process === active) ?? plan.tabs[0];
-  const cls = PROCESS_CLASSIFICATION[tab.process];
-  const seeCause = canSeeCause(user, tab.process);
-  const seeDetail = canSeeDetail(user, tab.process);
 
   return (
     <Card
@@ -65,7 +49,6 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
       {/* 탭 스트립 */}
       <div className="row" style={{ gap: 6, marginBottom: 14 }} role="tablist" aria-label="원인 공정">
         {plan.tabs.map((t) => {
-          const c = PROCESS_CLASSIFICATION[t.process];
           const on = t.process === tab.process;
           return (
             <button
@@ -83,11 +66,6 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
               <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{t.rank}</span>
               {t.meta.label}
               <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{pct(t.relevance)}</span>
-              {c !== 'internal' && (
-                <span style={{ color: 'var(--text-muted)' }} title={CLASSIFICATION_META[c].label}>
-                  🔒
-                </span>
-              )}
             </button>
           );
         })}
@@ -108,51 +86,16 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
             효과검증 중 {tab.monitoringCount}건
           </Badge>
         )}
-        <Badge color={cls === 'restricted' ? '--critical' : cls === 'confidential' ? '--warning' : undefined}>
-          {CLASSIFICATION_META[cls].label}
-        </Badge>
       </div>
-      <p className="section-note" style={{ color: 'var(--text-muted)', marginBottom: 8 }}>
+      <p className="section-note" style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
         {tab.meta.character}
       </p>
-      {(() => {
-        const pm = primaryMetricOf(tab.process);
-        if (!pm) return null;
-        return (
-          <p className="section-note" style={{ marginBottom: 12 }}>
-            <strong style={{ fontWeight: 600 }}>주 진단지표</strong> {pm.label} · {pm.method} —{' '}
-            <span style={{ color: 'var(--text-muted)' }}>{pm.reflects}</span>
-          </p>
-        );
-      })()}
 
-      {!seeCause ? (
-        <div className="banner warn">
-          <span className="caveat-icon" aria-hidden>🔒</span>
-          <div>
-            <strong>열람 제한</strong>
-            <div style={{ marginTop: 3 }}>{maskReason(user, tab.process)}</div>
-            <div style={{ marginTop: 3, color: 'var(--text-muted)' }}>
-              현재 역할: {ROLE_META[user.role].label} · 이 공정의 원인 {tab.causes.length}건이 가려졌습니다.
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="stack" style={{ gap: 12 }}>
-          {tab.causes.map((c, i) => (
-            <CauseCard
-              key={c.id}
-              cause={c}
-              index={i + 1}
-              seeDetail={seeDetail}
-              maskNote={maskReason(user, tab.process)}
-              checked={checkedActions}
-              onToggle={onToggle}
-              onAudit={() => onAudit(`${tab.meta.label} / ${c.name}`, tab.process)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="stack" style={{ gap: 12 }}>
+        {tab.causes.map((c, i) => (
+          <CauseCard key={c.id} cause={c} index={i + 1} checked={checkedActions} onToggle={onToggle} />
+        ))}
+      </div>
 
       {tab.exclusions.length > 0 && (
         <>
@@ -193,22 +136,14 @@ export function ProcessTabs({ plan, user, checkedActions, onToggle, onAudit }: P
 function CauseCard({
   cause,
   index,
-  seeDetail,
-  maskNote,
   checked,
   onToggle,
-  onAudit,
 }: {
   cause: RankedCause;
   index: number;
-  seeDetail: boolean;
-  maskNote: string;
   checked: string[];
   onToggle: (id: string) => void;
-  onAudit: () => void;
 }) {
-  const manuals = manualsForCause(cause.id);
-  const verification = verificationOf(cause);
   const doneCount = cause.resolution.filter((_, i) => checked.includes(`${cause.id}#${i}`)).length;
   const allDone = doneCount === cause.resolution.length && cause.resolution.length > 0;
 
@@ -274,162 +209,54 @@ function CauseCard({
         </div>
       )}
 
-      {!seeDetail ? (
-        <div className="caveat" style={{ marginTop: 10, borderLeftColor: 'var(--critical)' }}>
-          <span className="caveat-icon" aria-hidden>🔒</span>
-          <div>확인 항목과 개선안은 가려졌습니다. {maskNote}</div>
+      {cause.metrology && (
+        <div className="action-rationale" style={{ marginTop: 4 }}>
+          <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>계측 방법</strong>
+          {'  '}
+          {cause.metrology}
+          <span style={{ color: 'var(--text-muted)' }}>{'  '}— 대응 Log에 기록된 확인 계측</span>
         </div>
-      ) : (
-        <>
-          {verification && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: '9px 11px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--surface-sunken)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <div className="row" style={{ gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 600 }}>확인 계측</span>
-                <Badge strong>{verification.metric.label}</Badge>
-                <Badge>{verification.metric.method}</Badge>
-                <Badge>{METRIC_FORM_LABEL[verification.metric.form]}</Badge>
-                {verification.metric.destructive && (
-                  <Badge color="--critical" strong>
-                    웨이퍼 소모
-                  </Badge>
-                )}
-                <Badge>
-                  {verification.metric.perWaferSec !== undefined
-                    ? `웨이퍼당 ${verification.metric.perWaferSec}초`
-                    : `64지점 ${Math.round(measurementSec(verification.metric, 64) / 60)}분`}
-                </Badge>
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {verification.expect}
-              </div>
-              {verification.note && (
-                <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>{verification.note}</div>
-              )}
-            </div>
-          )}
-
-          <div style={{ marginTop: 10 }}>
-            <div className="card-sub" style={{ marginBottom: 4 }}>
-              해결 · 즉시 대응 {cause.resolution.length > 0 && `(${doneCount}/${cause.resolution.length})`}
-            </div>
-            <div className="stack" style={{ gap: 3 }}>
-              {cause.resolution.map((chk, i) => {
-                const id = `${cause.id}#${i}`;
-                return (
-                  <label className="check" key={id}>
-                    <input
-                      type="checkbox"
-                      checked={checked.includes(id)}
-                      onChange={() => {
-                        onToggle(id);
-                        onAudit();
-                      }}
-                    />
-                    <span style={{ color: checked.includes(id) ? 'var(--text-muted)' : undefined }}>{chk}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={{ marginTop: 10 }}>
-            <div className="card-sub" style={{ marginBottom: 4 }}>
-              개선 · 재발방지
-              <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
-                {' '}
-                — 오늘 하는 일이 아니라 공정 담당이 계획을 잡을 것
-              </span>
-            </div>
-            <ul className="action-checks">
-              {cause.improvement.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          </div>
-
-          {manuals.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <div className="card-sub" style={{ marginBottom: 4 }}>참조 매뉴얼</div>
-              <div className="stack" style={{ gap: 5 }}>
-                {manuals.map((m) => (
-                  <ManualRow key={m.id} title={m.title} revision={m.revision} section={m.section} path={m.path} url={m.url} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {cause.logIds.length > 0 && (
-            <div className="section-note" style={{ marginTop: 10, color: 'var(--text-muted)' }}>
-              대응 Log {cause.logIds.join(', ')} · 지난 12개월 {cause.occurrences}회 기록
-              {cause.metrology && ` · 확인 계측 ${cause.metrology}`}
-              {cause.lastSeen && ` · 마지막 ${cause.lastSeen}`} · 상태{' '}
-              {CASE_STATUS_SHORT[cause.caseState.status]}
-              <div style={{ marginTop: 3 }}>{explainStatus(cause.caseState)}</div>
-            </div>
-          )}
-        </>
       )}
-    </div>
-  );
-}
 
-function ManualRow({
-  title,
-  revision,
-  section,
-  path,
-  url,
-}: {
-  title: string;
-  revision: string;
-  section?: string;
-  path: string;
-  url?: string;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <div style={{ fontSize: 12.5 }}>
-      <div className="row" style={{ gap: 6 }}>
-        {url ? (
-          <a href={url} target="_blank" rel="noreferrer" style={{ color: 'var(--series-1)' }}>
-            {title}
-          </a>
-        ) : (
-          <span>{title}</span>
-        )}
-        <Badge>{revision}</Badge>
-        {section && <span style={{ color: 'var(--text-muted)' }}>{section}</span>}
-      </div>
-      <div className="row" style={{ gap: 6, marginTop: 2 }}>
-        <code className="mono" style={{ color: 'var(--text-muted)', wordBreak: 'break-all' }}>
-          {path}
-        </code>
-        <button
-          type="button"
-          className="btn btn-sm"
-          onClick={() => {
-            navigator.clipboard?.writeText(path).then(
-              () => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1600);
-              },
-              () => setCopied(false),
+      <div style={{ marginTop: 10 }}>
+        <div className="card-sub" style={{ marginBottom: 4 }}>
+          해결 · 즉시 대응 {cause.resolution.length > 0 && `(${doneCount}/${cause.resolution.length})`}
+        </div>
+        <div className="stack" style={{ gap: 3 }}>
+          {cause.resolution.map((chk, i) => {
+            const id = `${cause.id}#${i}`;
+            return (
+              <label className="check" key={id}>
+                <input type="checkbox" checked={checked.includes(id)} onChange={() => onToggle(id)} />
+                <span style={{ color: checked.includes(id) ? 'var(--text-muted)' : undefined }}>{chk}</span>
+              </label>
             );
-          }}
-          title="브라우저는 보안상 사내 파일 경로를 직접 열 수 없어 경로를 복사한다"
-        >
-          {copied ? '복사됨' : '경로 복사'}
-        </button>
+          })}
+        </div>
       </div>
+
+      <div style={{ marginTop: 10 }}>
+        <div className="card-sub" style={{ marginBottom: 4 }}>
+          개선 · 재발방지
+          <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
+            {' '}
+            — 오늘 하는 일이 아니라 공정 담당이 계획을 잡을 것
+          </span>
+        </div>
+        <ul className="action-checks">
+          {cause.improvement.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      </div>
+
+      {cause.logIds.length > 0 && (
+        <div className="section-note" style={{ marginTop: 10, color: 'var(--text-muted)' }}>
+          대응 Log {cause.logIds.join(', ')} · 지난 12개월 {cause.occurrences}회 기록
+          {cause.lastSeen && ` · 마지막 ${cause.lastSeen}`} · 상태 {CASE_STATUS_SHORT[cause.caseState.status]}
+          <div style={{ marginTop: 3 }}>{explainStatus(cause.caseState)}</div>
+        </div>
+      )}
     </div>
   );
 }

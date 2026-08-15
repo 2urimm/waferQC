@@ -1,16 +1,11 @@
-import { Dashboard } from './pages/Dashboard';
-import { DeviceLab } from './pages/DeviceLab';
 import { History } from './pages/History';
 import { Inspect } from './pages/Inspect';
 import { Badge } from './components/ui';
-import { ROLE_META } from './services/security';
 import { AppProvider, useApp, type TabId } from './state/AppStore';
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'inspect', label: '검사' },
-  { id: 'dashboard', label: '대시보드' },
   { id: 'history', label: '이력' },
-  { id: 'device', label: '장비 · 권한' },
 ];
 
 function Shell() {
@@ -38,20 +33,15 @@ function Shell() {
         </nav>
 
         <div className="topbar-right">
-          <Badge color={state.linkState === 'connected' ? '--good' : undefined}>
-            {state.linkState === 'connected' ? `연결됨 · ${state.linkKind === 'mock' ? '가상' : '보드'}` : '장치 미연결'}
-          </Badge>
-          <Badge strong title={ROLE_META[state.user.role].description}>
-            {state.user.name} · {ROLE_META[state.user.role].label}
+          <Badge color={state.engineKind === 'model' ? '--good' : '--warning'} strong>
+            {state.engineKind === 'model' ? '실제 모델' : '규칙 대체판'}
           </Badge>
         </div>
       </header>
 
       <main className="main">
         {state.tab === 'inspect' && <Inspect />}
-        {state.tab === 'dashboard' && <Dashboard />}
         {state.tab === 'history' && <History />}
-        {state.tab === 'device' && <DeviceLab />}
       </main>
     </div>
   );

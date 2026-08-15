@@ -90,8 +90,8 @@ function waferNoOf(affected: string, n: number): number {
  *
  * 결정적으로 만든다 — 대시보드가 새로고침마다 흔들리면 읽을 수가 없다.
  * 대장의 조치 결과를 `resolution`에 그대로 넣고 해당 원인의 해결 항목을 완료 표시한다.
- * 종결/모니터링 판정은 여기서 안 한다 — 대장의 `상태` 열은 기준이 서 있지 않아서
- * domain/caseStatus.ts가 관찰기간 규칙으로 다시 판정한다.
+ * 종결/모니터링 판정은 여기서 안 한다 — 대장의 `상태` 열이 곧 상태이고,
+ * domain/caseStatus.ts는 그 값을 화면·보고서가 같은 문장으로 쓰도록 형태만 맞춘다.
  */
 function buildSeed(): Inspection[] {
   return DEFECT_CASES.map((c, n) => {

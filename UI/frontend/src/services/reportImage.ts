@@ -4,15 +4,6 @@ import { CONFIDENCE_COPY, FAMILIES, confidenceBand } from '../config/taxonomy';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
-import {
-  CLASSIFICATION_META,
-  PROCESS_CLASSIFICATION,
-  ROLE_META,
-  canSeeCause,
-  canSeeDetail,
-  type Classification,
-  type User,
-} from './security';
 
 /**
  * 점검 보고서 PNG.
@@ -122,7 +113,6 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 export interface ReportImageOptions {
   inspection: Inspection;
   plan: DiagnosisPlan;
-  user: User;
   /** 상위 몇 개 공정까지 실을지 */
   processLimit?: number;
 }
@@ -131,12 +121,8 @@ export interface RenderedImage {
   blob: Blob;
   width: number;
   height: number;
-  classification: Classification;
-  maskedCount: number;
   title: string;
 }
-
-const CLASS_RANK: Record<Classification, number> = { internal: 0, confidential: 1, restricted: 2 };
 
 export async function renderReportPng(opts: ReportImageOptions): Promise<RenderedImage> {
   // 1차: 높이를 모르므로 넉넉한 캔버스에 그려 실제 높이를 잰다.
@@ -152,13 +138,11 @@ export async function renderReportPng(opts: ReportImageOptions): Promise<Rendere
     blob,
     width: W,
     height: final.height,
-    classification: final.classification,
-    maskedCount: final.maskedCount,
     title: final.title,
   };
 }
 
-function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, canvasHeight: number) {
+function draw({ inspection, plan, processLimit = 3 }: ReportImageOptions, canvasHeight: number) {
   const { verdict } = inspection;
   const family = FAMILIES[verdict.family];
   const top = verdict.familyScores[0];
@@ -179,8 +163,6 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
   g.fillRect(0, 0, W, canvasHeight);
 
   const c: Ctx = { g, y: PAD + 20 };
-  let maskedCount = 0;
-  let maxClass: Classification = 'internal';
 
   /* ── 헤더 ── */
   text(c, '웨이퍼 결함 스크리닝 점검 보고서', PAD, 24, C.ink, 600);
@@ -194,7 +176,7 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
   );
   text(
     c,
-    `8×8 (64칸) 저해상도 1차 스크리닝 · ${verdict.engineVersion}${verdict.engine === 'rule-mock' ? ' (규칙 기반 대체 — 학습 모델 미연결)' : ''} · 작성 ${user.name} · ${ROLE_META[user.role].label}`,
+    `8×8 (64칸) 저해상도 1차 스크리닝 · ${verdict.engineVersion}${verdict.engine === 'rule-mock' ? ' (규칙 기반 대체 — 학습 모델 미연결)' : ''}`,
     PAD,
     12,
     C.muted,
@@ -365,9 +347,6 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
   c.y += 10;
 
   for (const tab of plan.tabs.slice(0, processLimit)) {
-    const cls = PROCESS_CLASSIFICATION[tab.process];
-    if (CLASS_RANK[cls] > CLASS_RANK[maxClass]) maxClass = cls;
-
     g.font = font(14, 600);
     g.fillStyle = C.ink;
     g.fillText(`${tab.rank}. ${tab.meta.label}`, PAD, c.y);
@@ -375,18 +354,8 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
     let hx = PAD + hw + 12;
     hx = badge(g, `연관도 ${pct(tab.relevance)}`, hx, c.y - 4, C.deemph);
     hx = badge(g, `원인 ${tab.causes.length}건`, hx, c.y - 4, C.deemph);
-    hx = badge(g, `이력 ${tab.occurrences}건`, hx, c.y - 4, C.deemph);
-    if (cls !== 'internal') badge(g, CLASSIFICATION_META[cls].label, hx, c.y - 4, cls === 'restricted' ? C.critical : C.warning, true);
+    badge(g, `이력 ${tab.occurrences}건`, hx, c.y - 4, C.deemph);
     c.y += 22;
-
-    if (!canSeeCause(user, tab.process)) {
-      maskedCount += tab.causes.length;
-      text(c, `열람 권한 없음 — 이 공정의 원인 ${tab.causes.length}건이 가려졌습니다. 담당자에게 이관할 것.`, PAD + 14, 12, C.serious, 400, W - PAD * 2 - 28);
-      c.y += 12;
-      continue;
-    }
-
-    const detail = canSeeDetail(user, tab.process);
 
     for (const cause of tab.causes.slice(0, 2)) {
       g.font = font(13, 600);
@@ -407,13 +376,8 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
         text(c, cause.supportNote, PAD + 26, 11.5, C.muted, 400, W - PAD * 2 - 40);
       }
 
-      if (!detail) {
-        maskedCount += 1;
-        text(c, '해결·개선 항목은 권한 제한으로 가려졌습니다.', PAD + 26, 11.5, C.serious, 400, W - PAD * 2 - 40);
-      } else {
-        for (const chk of cause.resolution.slice(0, 3)) {
-          text(c, `☐ ${chk}`, PAD + 26, 11.5, C.ink2, 400, W - PAD * 2 - 40);
-        }
+      for (const chk of cause.resolution.slice(0, 3)) {
+        text(c, `☐ ${chk}`, PAD + 26, 11.5, C.ink2, 400, W - PAD * 2 - 40);
       }
       c.y += 8;
     }
@@ -424,10 +388,6 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
   c.y += 6;
   rule(c);
   c.y += 20;
-  text(c, `${CLASSIFICATION_META[maxClass].label} — 사외 반출 금지. 열람 이력이 기록됩니다.`, PAD, 12, C.ink2, 600);
-  if (maskedCount > 0) {
-    text(c, `권한 제한으로 ${maskedCount}개 항목이 제외되었습니다.`, PAD, 11.5, C.serious);
-  }
   text(
     c,
     '8×8(64칸) 저해상도 1차 스크리닝 결과입니다. 확정 진단이 아니라 점검 우선순위를 좁히기 위한 것이며, 개선안 항목은 검토 전 초안을 포함합니다.',
@@ -439,8 +399,6 @@ function draw({ inspection, plan, user, processLimit = 3 }: ReportImageOptions, 
   return {
     canvas,
     height: Math.ceil(c.y + 8),
-    classification: maxClass,
-    maskedCount,
     title: `${inspection.lotId}_W${inspection.waferNo}_${family.short}_점검보고서`,
   };
 }

@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { FAMILIES, FAMILY_ORDER, type FamilyId } from '../config/taxonomy';
 import { PATTERN_LABEL, causeById } from '../domain/causes';
 import { CASE_STATUS_SHORT, causeStatus } from '../domain/caseStatus';
-import { METRICS, formatSpec } from '../domain/metrology';
 import { buildPlan } from '../domain/plan';
 import { ProcessTabs } from '../components/ProcessTabs';
 import { ReportPanel } from '../components/ReportPanel';
@@ -12,7 +11,7 @@ import { Badge, Card, Empty } from '../components/ui';
 import { useApp } from '../state/AppStore';
 
 export function History() {
-  const { state, patch, toggleAction, setResolution, reseedHistory, logAudit } = useApp();
+  const { state, patch, toggleAction, setResolution, reseedHistory } = useApp();
   const [filter, setFilter] = useState<FamilyId | 'ALL'>('ALL');
   const [lotQuery, setLotQuery] = useState('');
 
@@ -27,10 +26,7 @@ export function History() {
   );
 
   const selected = state.history.find((h) => h.id === state.selectedInspectionId) ?? null;
-  const plan = useMemo(
-    () => (selected ? buildPlan(selected.verdict, selected.metricId ? METRICS[selected.metricId].process : undefined) : null),
-    [selected],
-  );
+  const plan = useMemo(() => (selected ? buildPlan(selected.verdict) : null), [selected]);
 
   return (
     <div className="stack">
@@ -141,14 +137,9 @@ export function History() {
               <WaferGrid map={selected.map} />
               <WaferLegend />
               <div className="row" style={{ marginTop: 10, gap: 6 }}>
-                <Badge>{selected.source === 'mock' ? '가상 장치' : '실제 보드'}</Badge>
-                <Badge>프레임 {selected.elapsedMs.toFixed(1)} ms</Badge>
                 <Badge>{selected.verdict.engineVersion}</Badge>
-                {selected.metricId && selected.spec && (
-                  <Badge strong>
-                    {METRICS[selected.metricId].label} · {formatSpec(METRICS[selected.metricId], selected.spec)}
-                  </Badge>
-                )}
+                <Badge>추론 {selected.elapsedMs.toFixed(1)} ms</Badge>
+                {selected.caseId && <Badge strong>대응 Log {selected.caseId}</Badge>}
               </div>
 
               <div className="divider" style={{ margin: '14px 0' }} />
@@ -168,18 +159,11 @@ export function History() {
 
           <ProcessTabs
             plan={plan}
-            user={state.user}
             checkedActions={selected.checkedActions}
             onToggle={(actionId) => toggleAction(selected.id, actionId)}
-            onAudit={(target) => logAudit('view-detail', target)}
           />
 
-          <ReportPanel
-            inspection={selected}
-            plan={plan}
-            user={state.user}
-            onAudit={(action, target, classification) => logAudit(action, target, classification)}
-          />
+          <ReportPanel inspection={selected} plan={plan} />
         </>
       )}
     </div>

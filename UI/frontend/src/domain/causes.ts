@@ -59,7 +59,7 @@ export const PATTERN_LABEL: Record<DefectPatternId, string> = {
  *
  * 팀 결정: 측정지표를 공정별로 통일하려다 보니 6개로 통합하는 게 맞다고 판단했다.
  * (8대 공정에서 웨이퍼제조·금속배선·EDS·패키징을 빼고, 산화를 Diffusion으로 묶음)
- * 각 공정은 주 진단지표를 정확히 하나씩 갖는다 — domain/metrology.ts 참고.
+ * 공정별 확인 계측은 대응 Log의 `계측 방법` 열에서 온다 — CauseEntry.metrology.
  *
  * 엑셀 개선안과 대응 Log가 똑같이 이 6개로 되어 있고 담당팀도 6개라, 여기에 공통 설비용
  * 가상 공정을 더 두지 않는다. 반송 로봇·Slit Valve처럼 여러 공정에 공통인 설비는 엑셀에서

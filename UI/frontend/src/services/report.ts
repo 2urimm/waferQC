@@ -4,46 +4,25 @@ import { CASE_STATUS_LABEL, explainStatus } from '../domain/caseStatus';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
-import { manualsForCause } from './manuals';
-import {
-  CLASSIFICATION_META,
-  PROCESS_CLASSIFICATION,
-  ROLE_META,
-  canSeeCause,
-  canSeeDetail,
-  type Classification,
-  type User,
-} from './security';
 
 /**
  * 점검 보고서 생성.
  *
- * 보고서는 두 가지를 동시에 만족해야 한다.
- *   - 받아 보는 사람이 그대로 실행할 수 있을 것 (무엇을, 어느 순서로, 얼마나 걸리는지)
- *   - 열람 권한을 넘어선 내용이 실려 나가지 않을 것
- * 그래서 마스킹은 화면과 같은 규칙을 그대로 태운다. 화면에서 가려진 게 보고서에서
- * 풀리면 마스킹의 의미가 없다.
+ * 받아 보는 사람이 그대로 실행할 수 있어야 한다 — 무엇을, 어느 순서로.
  *
  * 판정 근거와 한계를 반드시 같이 싣는다. 결론만 실린 보고서는 받는 쪽에서 검증할 수 없고,
  * 저해상도 스크리닝 결과를 확정 진단처럼 읽게 만든다.
  */
 
-const CLASS_RANK: Record<Classification, number> = { internal: 0, confidential: 1, restricted: 2 };
-
 export interface ReportOptions {
   inspection: Inspection;
   plan: DiagnosisPlan;
-  user: User;
   /** 상위 몇 개 공정까지 실을지 */
   processLimit?: number;
 }
 
 export interface GeneratedReport {
   markdown: string;
-  /** 실린 내용 중 최고 기밀 등급 */
-  classification: Classification;
-  /** 권한 때문에 빠진 항목 수 */
-  maskedCount: number;
   title: string;
 }
 
@@ -51,7 +30,7 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 const dt = (t: number) =>
   new Date(t).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' });
 
-export function generateReport({ inspection, plan, user, processLimit = 4 }: ReportOptions): GeneratedReport {
+export function generateReport({ inspection, plan, processLimit = 4 }: ReportOptions): GeneratedReport {
   const { verdict } = inspection;
   const family = FAMILIES[verdict.family];
   const top = verdict.familyScores[0];
@@ -59,8 +38,6 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
   const band = confidenceBand(top.probability, second?.probability ?? 0);
 
   const tabs = plan.tabs.slice(0, processLimit);
-  let maskedCount = 0;
-  let maxClass: Classification = 'internal';
 
   const L: string[] = [];
 
@@ -72,8 +49,7 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
   L.push(`| 측정 시각 | ${dt(inspection.capturedAt)} |`);
   L.push(`| 검사 해상도 | 8×8 (64칸) — 저해상도 1차 스크리닝 |`);
   L.push(`| 판정 엔진 | ${verdict.engineVersion}${verdict.engine === 'rule-mock' ? ' (규칙 기반 대체 — 학습 모델 미연결)' : ''} |`);
-  L.push(`| 측정 경로 | ${inspection.source === 'mock' ? '가상 장치' : '실제 보드'} · 프레임 ${inspection.elapsedMs.toFixed(1)} ms |`);
-  L.push(`| 작성자 | ${user.name} (${ROLE_META[user.role].label} · ${user.dept}) |`);
+  L.push(`| 추론 시간 | ${inspection.elapsedMs.toFixed(1)} ms |`);
   L.push(`| 작성 시각 | ${dt(Date.now())} |`);
   L.push('');
 
@@ -165,25 +141,10 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
   L.push('');
 
   for (const tab of tabs) {
-    const cls = PROCESS_CLASSIFICATION[tab.process];
-    if (CLASS_RANK[cls] > CLASS_RANK[maxClass]) maxClass = cls;
-
     L.push(`### ${tab.rank}순위 · ${tab.meta.label}`);
     L.push('');
-    L.push(
-      `연관도 ${pct(tab.relevance)} · 원인 ${tab.causes.length}건 · 지난 12개월 ${tab.occurrences}건 발생 · ` +
-        `기밀 ${CLASSIFICATION_META[cls].short}`,
-    );
+    L.push(`연관도 ${pct(tab.relevance)} · 원인 ${tab.causes.length}건 · 지난 12개월 ${tab.occurrences}건 발생`);
     L.push('');
-
-    if (!canSeeCause(user, tab.process)) {
-      maskedCount += tab.causes.length;
-      L.push(`> 🔒 ${CLASSIFICATION_META[cls].label} — 작성자 권한(${ROLE_META[user.role].label})에서 원인 상세가 가려졌습니다. 이 공정의 점검은 담당자에게 이관하십시오.`);
-      L.push('');
-      continue;
-    }
-
-    const detail = canSeeDetail(user, tab.process);
 
     for (const c of tab.causes) {
       L.push(`#### ${c.name}`);
@@ -199,18 +160,12 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
         L.push(`- ${mark}: ${c.supportNote}`);
       }
       if (c.needsLayout) L.push(`- ⚙ 방위만으로는 확인 불가 — 각도가 설비 배치에 달려 있어 실측 wafer map 대조 필요`);
+      if (c.metrology) L.push(`- 계측 방법: ${c.metrology} (대응 Log 기록)`);
       if (c.logIds.length) {
         L.push(`- 대응 이력: ${c.logIds.join(', ')} · 지난 12개월 ${c.occurrences}회 · 마지막 ${c.lastSeen ?? '—'}`);
         L.push(`- 상태: ${CASE_STATUS_LABEL[c.caseState.status]} — ${explainStatus(c.caseState)}`);
       }
       L.push('');
-
-      if (!detail) {
-        maskedCount += 1;
-        L.push(`> 🔒 확인 항목과 개선안은 ${CLASSIFICATION_META[cls].label}이라 가려졌습니다.`);
-        L.push('');
-        continue;
-      }
 
       L.push(`**해결 · 즉시 대응**`);
       L.push('');
@@ -219,17 +174,6 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
       L.push(`**개선 · 재발방지** *(공정 담당 계획 사항)*`);
       L.push('');
       for (const r of c.improvement) L.push(`- ${r}`);
-
-      const manuals = manualsForCause(c.id);
-      if (manuals.length) {
-        L.push('');
-        L.push(`**참조 매뉴얼**`);
-        L.push('');
-        for (const m of manuals) {
-          L.push(`- ${m.title} (${m.revision}) — ${m.section ?? '전체'}`);
-          L.push(`  - \`${m.path}\``);
-        }
-      }
       L.push('');
     }
   }
@@ -250,23 +194,12 @@ export function generateReport({ inspection, plan, user, processLimit = 4 }: Rep
   L.push(`---`);
   L.push('');
   L.push(
-    `**${CLASSIFICATION_META[maxClass].label}** — ${CLASSIFICATION_META[maxClass].note} ` +
-      `사외 반출 금지. 열람 이력이 기록됩니다.`,
-  );
-  if (maskedCount > 0) {
-    L.push('');
-    L.push(`권한 제한으로 ${maskedCount}개 항목이 이 보고서에서 제외되었습니다.`);
-  }
-  L.push('');
-  L.push(
     `*이 보고서는 8×8(64칸) 저해상도 1차 스크리닝 결과입니다. 확정 진단이 아니라 점검 우선순위를 좁히기 위한 것이며, ` +
       `개선안 항목은 검토 전 초안을 포함합니다.*`,
   );
 
   return {
     markdown: L.join('\n'),
-    classification: maxClass,
-    maskedCount,
     title: `${inspection.lotId}_W${inspection.waferNo}_${family.short}_점검보고서`,
   };
 }

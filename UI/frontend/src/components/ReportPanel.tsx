@@ -3,52 +3,36 @@ import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
 import { generateReport } from '../services/report';
 import { renderReportPng } from '../services/reportImage';
-import { CLASSIFICATION_META, type User } from '../services/security';
 import { Badge, Card } from './ui';
 
 /**
  * 점검 보고서.
  *
- * 화면과 같은 마스킹 규칙을 그대로 태운다 — 화면에서 가려진 게 보고서에서 풀리면
- * 마스킹이 의미가 없다. 반출(복사·다운로드)은 감사 로그에 남긴다.
+ * 판정·근거·한계와 엑셀 개선안에서 온 공정별 점검 순서를 한 장으로 묶는다.
+ * 마크다운(복사·.md)과 PNG 두 형태로 낼 수 있다.
  */
-export function ReportPanel({
-  inspection,
-  plan,
-  user,
-  onAudit,
-}: {
-  inspection: Inspection;
-  plan: DiagnosisPlan;
-  user: User;
-  onAudit: (action: 'copy-report' | 'export-report', target: string, classification: 'internal' | 'confidential' | 'restricted') => void;
-}) {
+export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan: DiagnosisPlan }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pngUrl, setPngUrl] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
 
-  const report = useMemo(
-    () => generateReport({ inspection, plan, user }),
-    [inspection, plan, user],
-  );
+  const report = useMemo(() => generateReport({ inspection, plan }), [inspection, plan]);
 
-  // 판정이나 권한이 바뀌면 이전 미리보기는 더 이상 맞지 않는다
+  // 판정이 바뀌면 이전 미리보기는 더 이상 맞지 않는다
   useEffect(() => {
     setPngUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
-  }, [inspection.id, user.id]);
+  }, [inspection.id]);
 
   useEffect(() => () => { if (pngUrl) URL.revokeObjectURL(pngUrl); }, [pngUrl]);
-
-  const cls = CLASSIFICATION_META[report.classification];
 
   const savePng = async () => {
     setRendering(true);
     try {
-      const img = await renderReportPng({ inspection, plan, user });
+      const img = await renderReportPng({ inspection, plan });
       const url = URL.createObjectURL(img.blob);
       const a = document.createElement('a');
       a.href = url;
@@ -58,7 +42,6 @@ export function ReportPanel({
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
-      onAudit('export-report', `${img.title}.png`, img.classification);
     } finally {
       setRendering(false);
     }
@@ -72,14 +55,12 @@ export function ReportPanel({
     a.download = `${report.title}.md`;
     a.click();
     URL.revokeObjectURL(url);
-    onAudit('export-report', report.title, report.classification);
   };
 
   const copy = () => {
     navigator.clipboard?.writeText(report.markdown).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
-      onAudit('copy-report', report.title, report.classification);
     });
   };
 
@@ -105,27 +86,8 @@ export function ReportPanel({
       }
     >
       <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-        <Badge
-          color={report.classification === 'restricted' ? '--critical' : report.classification === 'confidential' ? '--warning' : undefined}
-          strong
-        >
-          {cls.label}
-        </Badge>
         <Badge>{report.markdown.split('\n').length}줄</Badge>
-        {report.maskedCount > 0 && <Badge color="--serious">권한 제한 {report.maskedCount}건 제외</Badge>}
-      </div>
-
-      <div className={`banner ${report.classification === 'internal' ? 'info' : 'warn'}`}>
-        <span className="caveat-icon" aria-hidden>{report.classification === 'internal' ? 'i' : '!'}</span>
-        <div>
-          {cls.note} 사외 반출 금지이며, 복사·저장은 감사 로그에 기록됩니다.
-          {report.maskedCount > 0 && (
-            <div style={{ marginTop: 3, color: 'var(--text-muted)' }}>
-              현재 권한에서 열람할 수 없는 {report.maskedCount}개 항목은 보고서에서도 제외되었습니다. 해당 공정 담당자가 다시
-              생성해야 전체 내용이 실립니다.
-            </div>
-          )}
-        </div>
+        <Badge>공정 {plan.tabs.length}개</Badge>
       </div>
 
       {pngUrl && (
