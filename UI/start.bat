@@ -5,20 +5,20 @@ title waferQC 실행기
 rem ---------------------------------------------------------------------
 rem  waferQC 실행기 - 더블클릭하면 창 두 개가 뜬다.
 rem
-rem    1) 판정 모델 서버 (UI\backend\wafer_final_package\serve.py)  :8077
-rem    2) 화면 개발 서버 (UI\frontend, Vite)                        :5180
+rem    1) 판정 모델 서버 (backend\wafer_final_package\serve.py)  :8077
+rem    2) 화면 개발 서버 (frontend, Vite)                        :5180
 rem
 rem  화면은 시작할 때 모델 서버에 자동으로 붙는다. 모델 서버가 없으면
 rem  규칙 대체판으로 돌아가고, 그 사실이 화면 위쪽에 표시된다.
 rem  끄려면 두 창을 닫거나 각 창에서 Ctrl+C.
 rem
 rem  * 이 파일은 CP949 + CRLF 로 저장해야 한다. UTF-8이나 LF로 저장하면
-rem    한글이 깨지고 if 블록 파싱이 깨진다.
+rem    한글이 깨지고 if 블록 파싱이 깨진다. (.gitattributes로 CRLF 고정)
 rem ---------------------------------------------------------------------
 
 set "ROOT=%~dp0"
-set "MODEL=%ROOT%UI\backend\wafer_final_package"
-set "FRONT=%ROOT%UI\frontend"
+set "MODEL=%ROOT%backend\wafer_final_package"
+set "FRONT=%ROOT%frontend"
 
 if not exist "%MODEL%\.venv\Scripts\python.exe" (
     echo.
