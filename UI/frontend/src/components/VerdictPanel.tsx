@@ -21,6 +21,18 @@ const URGENCY_LABEL: Record<string, string> = {
   immediate: '즉시 대응',
 };
 
+/*
+  모델 패키지 v2(wafer_model.analyze_defect_direction)가 내는 방향 판정 근거.
+  최다 사분면이 나머지 세 사분면 평균보다 충분히 많을 때만 방향을 인정하고,
+  그렇지 않으면 방향을 비운다 — 아래 문구는 그 결과를 그대로 옮긴 것이다.
+*/
+const DIRECTION_METHOD_LABEL: Record<string, string> = {
+  max_vs_other_mean: '최다 사분면 — 나머지 평균보다 뚜렷하게 많음',
+  below_min_gap: '나머지 평균과 차이가 작아 방향 판단 보류',
+  max_tie: '최다 사분면이 동점이라 방향 판단 보류',
+  no_defect: '불량 칸 없음',
+};
+
 export function VerdictPanel({ verdict }: { verdict: Verdict }) {
   const family = FAMILIES[verdict.family];
   const top = verdict.familyScores[0];
@@ -160,7 +172,9 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
             <>
               <div className="divider" style={{ margin: '12px 0' }} />
               <div className="card-sub" style={{ marginBottom: 6 }}>
-                사분면 불량 분포 — {verdict.model.directionMethod === 'centroid_tiebreak' ? '동점이라 무게중심으로 결정' : '최다 사분면'}
+                사분면 불량 분포 —{' '}
+                {(verdict.model.directionMethod && DIRECTION_METHOD_LABEL[verdict.model.directionMethod]) ??
+                  '최다 사분면'}
               </div>
               <div
                 style={{

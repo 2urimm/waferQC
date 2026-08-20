@@ -16,7 +16,7 @@ export default defineConfig({
        * 두 번 내려간 원인이 이거였다. torch 안의 html 파일 때문에 페이지가 리로드되는
        * 부작용도 같이 없어진다.
        */
-      ignored: ['**/wafer_final_package/**', '**/.venv/**', '**/__pycache__/**'],
+      ignored: ['**/wafer_final_package*/**', '**/.venv/**', '**/__pycache__/**'],
     },
   },
 });

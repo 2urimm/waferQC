@@ -5,7 +5,7 @@ title waferQC 실행기
 rem ---------------------------------------------------------------------
 rem  waferQC 실행기 - 더블클릭하면 창 두 개가 뜬다.
 rem
-rem    1) 판정 모델 서버 (backend\wafer_final_package\serve.py)  :8077
+rem    1) 판정 모델 서버 (backend\wafer_final_package_v2\serve.py)  :8077
 rem    2) 화면 개발 서버 (frontend, Vite)                        :5180
 rem
 rem  화면은 시작할 때 모델 서버에 자동으로 붙는다. 모델 서버가 없으면
@@ -17,7 +17,7 @@ rem    한글이 깨지고 if 블록 파싱이 깨진다. (.gitattributes로 CRLF 고정)
 rem ---------------------------------------------------------------------
 
 set "ROOT=%~dp0"
-set "MODEL=%ROOT%backend\wafer_final_package"
+set "MODEL=%ROOT%backend\wafer_final_package_v2"
 set "FRONT=%ROOT%frontend"
 
 if not exist "%MODEL%\.venv\Scripts\python.exe" (

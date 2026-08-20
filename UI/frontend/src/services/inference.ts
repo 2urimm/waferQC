@@ -36,7 +36,7 @@ export class RuleInferenceEngine implements InferenceEngine {
 }
 
 /**
- * 실제 추론 서버(wafer_final_package/serve.py)의 응답.
+ * 실제 추론 서버(wafer_final_package_v2/serve.py)의 응답.
  * 필드명은 wafer_model.py의 `WaferInferenceSystem.predict()` 반환값 그대로다 —
  * 서버는 그걸 감싸기만 하고 이름을 바꾸지 않는다.
  */
@@ -70,7 +70,7 @@ export interface PredictResponse {
  *   요청  { "hardware_map": number[8][8] }   // 0(웨이퍼 밖) / 1(정상 die) / 2(불량 die)
  *   응답  PredictResponse
  *
- * 서버 띄우는 법은 wafer_final_package/serve.py 주석 참고.
+ * 서버 띄우는 법은 wafer_final_package_v2/serve.py 주석 참고.
  *
  * 판정·검토 여부는 전부 서버 값을 그대로 쓴다. UI가 다시 계산하지 않는다 —
  * 모델 정책(클래스별 임계, V3 대조)이 UI 규칙보다 정본이고, 두 곳에서 따로 계산하면

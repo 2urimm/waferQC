@@ -21,7 +21,7 @@ export function Inspect() {
     <div className="stack">
       {error && <Banner kind="warn">{error}</Banner>}
 
-      {/* ── 판정 엔진 (backend/wafer_final_package) ── */}
+      {/* ── 판정 엔진 (backend/wafer_final_package_v2) ── */}
       <Card
         title="판정 엔진"
         sub="실제 학습 모델(WaferCNNV2 + V3) 서버에 붙이거나, 서버 없이 규칙 대체판으로 돌린다"
@@ -63,7 +63,7 @@ export function Inspect() {
           <Banner kind="warn">
             모델 서버에 연결하지 못했습니다 — {state.modelServerDetail}
             <div style={{ marginTop: 6, color: 'var(--text-muted)' }}>
-              <code className="mono">UI/backend/wafer_final_package</code> 폴더에서 서버를 먼저 띄우세요:
+              <code className="mono">UI/backend/wafer_final_package_v2</code> 폴더에서 서버를 먼저 띄우세요:
               <br />
               <code className="mono">.venv\Scripts\python serve.py</code>
             </div>

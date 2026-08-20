@@ -1,7 +1,7 @@
 /**
  * 웨이퍼 맵 격자 상수.
  *
- * 8×8(64칸)은 모델 패키지(backend/wafer_final_package)의 입력 형상이다 —
+ * 8×8(64칸)은 모델 패키지(backend/wafer_final_package_v2)의 입력 형상이다 —
  * config/model.ts의 MODEL_GRID와 같은 값이어야 한다.
  */
 

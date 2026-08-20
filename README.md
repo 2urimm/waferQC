@@ -21,7 +21,7 @@
 직접 띄우려면 창 두 개가 필요하다 (cmd 기준):
 
 ```
-cd /d F:\waferQC\UI\backend\wafer_final_package && .venv\Scripts\python.exe serve.py
+cd /d F:\waferQC\UI\backend\wafer_final_package_v2 && .venv\Scripts\python.exe serve.py
 ```
 
 ```
@@ -145,7 +145,7 @@ cd UI/frontend && python scripts/gen_from_xlsx.py
 ## 구조
 
 앱은 `UI/` 아래에 프론트·백을 함께 두고, **팀에서 받은 것은 밖으로 뺐다.**
-`data/`의 엑셀 원본과 `UI/backend/wafer_final_package/`의 모델 패키지가 그것이고,
+`data/`의 엑셀 원본과 `UI/backend/wafer_final_package_v2/`의 모델 패키지가 그것이고,
 내용은 물론 **파일·폴더 이름도 받은 그대로** 둔다 — 위치만 옮겼다.
 
 ```
@@ -155,7 +155,7 @@ data/                    ★ 팀원 제공 원본 (읽기 전용)
 docs/                    연동 절차 · 모델 계약
 UI/
   backend/
-    wafer_final_package/ ★ 팀 제공 모델 패키지 — serve.py · models/ · .venv (git 제외)
+    wafer_final_package_v2/ ★ 팀 제공 모델 패키지 — serve.py · models/ · .venv (git 제외)
   frontend/              ↓ 이 저장소가 만드는 것
 src/
   config/

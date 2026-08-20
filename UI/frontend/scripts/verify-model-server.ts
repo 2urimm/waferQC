@@ -1,7 +1,7 @@
 /**
  * 웹 UI의 추론 어댑터가 실제 모델 서버와 제대로 맞물리는지 검증.
  *
- *   1) wafer_final_package 에서 서버를 띄우고
+ *   1) wafer_final_package_v2 에서 서버를 띄우고
  *        .venv\Scripts\python serve.py
  *   2) npm run verify:model
  *
@@ -28,7 +28,7 @@ const fail = (m: string) => {
   const probe = await probeModelServer(url);
   if (!probe.ok) {
     console.log(`\n모델 서버에 연결할 수 없습니다 (${url}) — ${probe.detail}`);
-    console.log('wafer_final_package 에서 먼저 실행하세요:  .venv\\Scripts\\python serve.py\n');
+    console.log('wafer_final_package_v2 에서 먼저 실행하세요:  .venv\\Scripts\\python serve.py\n');
     process.exit(2);
   }
   console.log(`\n${probe.detail}\n`);
