@@ -22,14 +22,15 @@ const URGENCY_LABEL: Record<string, string> = {
 };
 
 /*
-  모델 패키지 v2(wafer_model.analyze_defect_direction)가 내는 방향 판정 근거.
-  최다 사분면이 나머지 세 사분면 평균보다 충분히 많을 때만 방향을 인정하고,
-  그렇지 않으면 방향을 비운다 — 아래 문구는 그 결과를 그대로 옮긴 것이다.
+  모델 패키지 v2가 내는 방향 판정 근거. 기준은 패키지 README.txt 9-1절 그대로다 —
+  "가장 많은 영역의 defect 개수 - 나머지 3개 영역 평균 >= 2" 일 때만 방향으로 인정하고,
+  차이가 그보다 작거나 최다 영역이 공동 1등이면 방향성 불명확으로 처리한다.
+  문구도 패키지가 쓰는 용어("방향성 불명확")를 그대로 따른다.
 */
 const DIRECTION_METHOD_LABEL: Record<string, string> = {
-  max_vs_other_mean: '최다 사분면 — 나머지 평균보다 뚜렷하게 많음',
-  below_min_gap: '나머지 평균과 차이가 작아 방향 판단 보류',
-  max_tie: '최다 사분면이 동점이라 방향 판단 보류',
+  max_vs_other_mean: '최다 사분면 — 나머지 세 영역 평균보다 2개 이상 많음',
+  below_min_gap: '나머지 세 영역 평균과 차이가 2개 미만 — 방향성 불명확',
+  max_tie: '최다 사분면이 공동 1등 — 방향성 불명확',
   no_defect: '불량 칸 없음',
 };
 
@@ -132,6 +133,12 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
                   ` ${(verdict.model.directionConfidence * 100).toFixed(0)}%`}
               </Badge>
             )}
+            {/*
+              quadrantCounts가 있다는 건 모델이 방향 판정 대상(Scratch/Loc/Edge-Loc)으로
+              봤다는 뜻이다. 그런데도 방향이 비어 있으면 패키지가 "방향성 불명확"으로
+              처리한 것이므로, 방향 칸이 그냥 사라진 것처럼 보이지 않게 그대로 밝힌다.
+            */}
+            {!verdict.model.direction && verdict.model.quadrantCounts && <Badge>방향성 불명확</Badge>}
           </div>
 
           <dl className="kv">
