@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
 import { generateReport } from '../services/report';
-import { renderReportPng } from '../services/reportImage';
+import { ReportPngButton } from './ReportPngButton';
 import { FAMILIES } from '../config/taxonomy';
 import { Badge, Card } from './ui';
 
@@ -16,7 +16,6 @@ export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pngUrl, setPngUrl] = useState<string | null>(null);
-  const [rendering, setRendering] = useState(false);
 
   const report = useMemo(() => generateReport({ inspection, plan }), [inspection, plan]);
 
@@ -29,24 +28,6 @@ export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan
   }, [inspection.id]);
 
   useEffect(() => () => { if (pngUrl) URL.revokeObjectURL(pngUrl); }, [pngUrl]);
-
-  const savePng = async () => {
-    setRendering(true);
-    try {
-      const img = await renderReportPng({ inspection, plan });
-      const url = URL.createObjectURL(img.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${img.title}.png`;
-      a.click();
-      setPngUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return url;
-      });
-    } finally {
-      setRendering(false);
-    }
-  };
 
   const download = () => {
     const blob = new Blob([report.markdown], { type: 'text/markdown;charset=utf-8' });
@@ -83,9 +64,16 @@ export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan
           <button className="btn btn-sm" onClick={download}>
             .md 저장
           </button>
-          <button className="btn btn-sm btn-primary" onClick={savePng} disabled={rendering}>
-            {rendering ? '만드는 중…' : 'PNG 저장'}
-          </button>
+          <ReportPngButton
+            inspection={inspection}
+            plan={plan}
+            onRendered={(url) =>
+              setPngUrl((prev) => {
+                if (prev) URL.revokeObjectURL(prev);
+                return url;
+              })
+            }
+          />
         </>
       }
     >
