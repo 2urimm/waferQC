@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { buildPlan } from '../domain/plan';
 import { PATTERN_PRESETS, README_EXAMPLES } from '../domain/patterns';
 import { ProcessTabs } from '../components/ProcessTabs';
-import { ReportPngButton } from '../components/ReportPngButton';
+import { ReportPanel } from '../components/ReportPanel';
 import { VerdictPanel } from '../components/VerdictPanel';
 import { WaferGrid, WaferLegend } from '../components/WaferGrid';
 import { Badge, Banner, Card, Empty } from '../components/ui';
@@ -10,7 +10,7 @@ import { DEFAULT_MODEL_SERVER, isLocalView } from '../services/inference';
 import { useApp } from '../state/AppStore';
 
 export function Inspect() {
-  const { state, patch, setCell, applyPreset, clearDraft, runInspection, setTab, toggleAction, useModelEngine, useRuleEngine } =
+  const { state, patch, setCell, applyPreset, clearDraft, runInspection, toggleAction, useModelEngine, useRuleEngine } =
     useApp();
   const { draft, verdict, error, running } = state;
 
@@ -180,31 +180,13 @@ export function Inspect() {
         </div>
       </div>
 
-      {/*
-        보고서는 상단 탭으로 빠져 있다. 판정할 때마다 그 탭의 대상이 방금 판정으로 갈아끼워지는데,
-        탭을 옮기면 맥락이 끊기므로 여기서 바로 건너갈 수 있게 한다.
-      */}
-      {verdict && plan && current && (
-        <Card
-          title="점검 보고서"
-          sub={`이 판정(${current.lotId} · 웨이퍼 ${current.waferNo})이 보고서 탭의 대상이다`}
-          actions={
-            <>
-              <ReportPngButton inspection={current} plan={plan} />
-              <button className="btn btn-sm" onClick={() => setTab('report')}>
-                보고서 탭에서 열기 →
-              </button>
-            </>
-          }
-        >
-          <p className="section-note" style={{ color: 'var(--text-muted)' }}>
-            판정하고 바로 한 장 뽑을 때는 여기서 끝내면 된다. 미리보기 · 복사 · <code className="mono">.md</code> 저장은
-            보고서 탭에 있다. 판정을 다시 실행하면 보고서도 그 결과로 바뀌므로 따로 만들 필요는 없다.
-          </p>
-        </Card>
-      )}
-
       {/* ── 원인 추적 (반도체 불량 분석 개선안.xlsx) ── */}
+      {/*
+        보고서는 방금 판정한 건만 뽑는다. 지난 건을 다시 뽑을 일이 없어서
+        상단 탭으로 뺐던 걸 되돌렸다 — 만드는 자리와 보는 자리가 같은 편이 낫다.
+      */}
+      {verdict && plan && current && <ReportPanel inspection={current} plan={plan} />}
+
       {verdict && plan && (
         <ProcessTabs
           plan={plan}
