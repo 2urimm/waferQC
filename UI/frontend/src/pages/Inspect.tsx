@@ -23,7 +23,6 @@ export function Inspect() {
       {/* ── 판정 엔진 (backend/wafer_final_package_v2) ── */}
       <Card
         title="판정 엔진"
-        sub="실제 학습 모델(WaferCNNV2 + V3) 서버에 붙이거나, 서버 없이 규칙 대체판으로 돌린다"
         actions={
           <Badge color={state.engineKind === 'model' ? '--good' : '--warning'} strong>
             {state.engineKind === 'model' ? '실제 모델' : '규칙 대체판'}
@@ -52,12 +51,6 @@ export function Inspect() {
           </button>
         </div>
 
-        {state.modelServerStatus === 'up' && (
-          <div className="banner info" style={{ marginTop: 10 }}>
-            <span className="caveat-icon" aria-hidden>i</span>
-            <div>{state.modelServerDetail}</div>
-          </div>
-        )}
         {state.modelServerStatus === 'down' && (
           <Banner kind="warn">
             모델 서버에 연결하지 못했습니다 — {state.modelServerDetail}
