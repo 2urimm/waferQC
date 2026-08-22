@@ -603,6 +603,54 @@ table.data tr.clickable {
   cursor: pointer;
 }
 
+/*
+  원인 카드 안의 사실 표 — 항목 이름을 왼쪽 열에 세운다.
+  본문이 길어서 data 표의 nowrap을 풀고 줄바꿈을 허용한다.
+*/
+table.data.facts {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+table.data.facts th,
+table.data.facts td {
+  white-space: normal;
+  line-height: 1.6;
+  vertical-align: top;
+  padding: 6px 10px 6px 0;
+}
+
+table.data.facts th {
+  width: 92px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+table.data.facts td {
+  color: var(--text-secondary);
+}
+
+table.data.facts tbody tr:hover {
+  background: transparent;
+}
+
+table.data.facts tbody tr:last-child th,
+table.data.facts tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 소제목 아래 딸린 항목은 한 단 들여써서 위계가 보이게 한다 */
+.sub-list {
+  margin-left: 2px;
+  padding-left: 14px;
+  border-left: 1px solid var(--grid);
+}
+
+ul.action-checks.sub-list {
+  padding-left: 32px;
+}
+
 /* ── 통계 타일 ──────────────────────────────────────────────────────────── */
 
 .stat {

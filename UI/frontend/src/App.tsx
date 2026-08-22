@@ -1,11 +1,13 @@
 import { History } from './pages/History';
 import { Inspect } from './pages/Inspect';
+import { Report } from './pages/Report';
 import { Badge } from './components/ui';
 import { AppProvider, useApp, type TabId } from './state/AppStore';
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'inspect', label: '검사' },
   { id: 'history', label: '이력' },
+  { id: 'report', label: '보고서' },
 ];
 
 function Shell() {
@@ -42,6 +44,7 @@ function Shell() {
       <main className="main">
         {state.tab === 'inspect' && <Inspect />}
         {state.tab === 'history' && <History />}
+        {state.tab === 'report' && <Report />}
       </main>
     </div>
   );

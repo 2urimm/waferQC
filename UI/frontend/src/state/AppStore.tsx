@@ -20,7 +20,7 @@ import {
 } from '../services/inference';
 import { loadHistory, resetHistory, saveInspection, updateInspection } from '../services/history';
 
-export type TabId = 'inspect' | 'history';
+export type TabId = 'inspect' | 'history' | 'report';
 
 interface State {
   tab: TabId;

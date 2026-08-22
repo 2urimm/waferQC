@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { buildPlan } from '../domain/plan';
 import { PATTERN_PRESETS, README_EXAMPLES } from '../domain/patterns';
 import { ProcessTabs } from '../components/ProcessTabs';
-import { ReportPanel } from '../components/ReportPanel';
 import { VerdictPanel } from '../components/VerdictPanel';
 import { WaferGrid, WaferLegend } from '../components/WaferGrid';
 import { Badge, Banner, Card, Empty } from '../components/ui';
@@ -69,18 +68,20 @@ export function Inspect() {
             </div>
           </Banner>
         )}
-
-        <p className="section-note" style={{ marginTop: 10, color: 'var(--text-muted)' }}>
-          규칙 대체판은 학습된 모델이 아니라 UI를 돌리기 위한 임시 판정기다. 실제 모델에 연결하면 클래스별 임계값·V3
-          대조·사분면 방향 판정이 모델 정책 그대로 적용되고, 검토 필요 여부도 UI가 다시 계산하지 않고 서버 판단을
-          그대로 쓴다.
-        </p>
       </Card>
 
       <div className="grid-2">
         {/* ── 입력 ── */}
         <div className="stack">
-          <Card title="패턴 입력" sub="드래그로 불량 die를 찍고, 우클릭(또는 Ctrl+클릭)으로 되돌린다.">
+          <Card
+            title="패턴 입력"
+            sub="드래그로 불량 die를 찍고, 우클릭(또는 Ctrl+클릭)으로 되돌린다."
+            actions={
+              <button className="btn btn-sm btn-primary" onClick={runInspection} disabled={running}>
+                {running ? '판정 중…' : '판정하기'}
+              </button>
+            }
+          >
             <WaferGrid map={draft} editable={!running} onCell={setCell} />
             <WaferLegend />
 
@@ -89,7 +90,8 @@ export function Inspect() {
                 전체 지우기
               </button>
               <span className="section-note" style={{ color: 'var(--text-muted)' }}>
-                웨이퍼 밖 {64 - draft.filter((c) => c !== 0).length}칸은 원형 웨이퍼 밖이라 편집되지 않는다.
+                불량 die {draft.filter((c) => c === 2).length}칸 · 웨이퍼 밖{' '}
+                {64 - draft.filter((c) => c !== 0).length}칸은 편집되지 않는다.
               </span>
             </div>
 
@@ -163,38 +165,6 @@ export function Inspect() {
 
         {/* ── 판정 ── */}
         <div className="stack">
-          <Card
-            title="판정 실행"
-            sub="그린 맵을 그대로 판정 엔진에 넣는다"
-            actions={
-              <button className="btn btn-sm btn-primary" onClick={runInspection} disabled={running}>
-                {running ? '판정 중…' : '판정하기'}
-              </button>
-            }
-          >
-            <div className="row" style={{ alignItems: 'flex-start', gap: 18 }}>
-              <div style={{ flex: '0 0 auto', width: 220 }}>
-                <WaferGrid map={draft} size={220} />
-                <WaferLegend />
-              </div>
-
-              <dl className="kv" style={{ flex: 1, minWidth: 180 }}>
-                <dt>입력 격자</dt>
-                <dd>8×8 (64칸)</dd>
-                <dt>불량 die</dt>
-                <dd>{draft.filter((c) => c === 2).length}칸</dd>
-                <dt>판정 엔진</dt>
-                <dd>{state.engineKind === 'model' ? '실제 모델 서버' : '규칙 대체판'}</dd>
-                {current && (
-                  <>
-                    <dt>추론 시간</dt>
-                    <dd>{current.elapsedMs.toFixed(1)} ms</dd>
-                  </>
-                )}
-              </dl>
-            </div>
-          </Card>
-
           {verdict ? (
             <VerdictPanel verdict={verdict} />
           ) : (
@@ -215,8 +185,6 @@ export function Inspect() {
           }}
         />
       )}
-
-      {verdict && plan && current && <ReportPanel inspection={current} plan={plan} />}
     </div>
   );
 }

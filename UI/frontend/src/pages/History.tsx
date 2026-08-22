@@ -4,7 +4,6 @@ import { PATTERN_LABEL, causeById } from '../domain/causes';
 import { CASE_STATUS_SHORT, causeStatus } from '../domain/caseStatus';
 import { buildPlan } from '../domain/plan';
 import { ProcessTabs } from '../components/ProcessTabs';
-import { ReportPanel } from '../components/ReportPanel';
 import { VerdictPanel } from '../components/VerdictPanel';
 import { WaferGrid, WaferLegend } from '../components/WaferGrid';
 import { Badge, Card, Empty } from '../components/ui';
@@ -163,7 +162,7 @@ export function History() {
             onToggle={(actionId) => toggleAction(selected.id, actionId)}
           />
 
-          <ReportPanel inspection={selected} plan={plan} />
+          {/* 보고서는 상단 '보고서' 탭에서 낸다 — 선택한 이력이 그대로 보고서 대상이 된다 */}
         </>
       )}
     </div>

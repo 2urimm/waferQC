@@ -1,11 +1,14 @@
 import { REVIEW_REASON_COPY } from '../config/model';
-import { CONFIDENCE_COPY, FAMILIES, confidenceBand, unresolvedPairsFor } from '../config/taxonomy';
+import { CONFIDENCE_COPY, FAMILIES, confidenceBand } from '../config/taxonomy';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { Verdict } from '../domain/types';
 import { ProbabilityBars } from './charts';
 import { Badge, Card } from './ui';
 
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
+
+/** 이 값 미만인 계통은 막대에서 접는다 (1위는 예외로 항상 표시) */
+const FAMILY_FLOOR_PCT = 5;
 
 const URGENCY_COLOR: Record<string, string> = {
   none: '--good',
@@ -39,7 +42,15 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
   const top = verdict.familyScores[0];
   const second = verdict.familyScores[1];
   const band = confidenceBand(top.probability, second?.probability ?? 0);
-  const pairs = unresolvedPairsFor(verdict.family);
+
+  /*
+    계통 확률은 합이 1이라 50% 넘는 계통이 구조적으로 하나뿐이다 — 그 컷은 판정 헤드라인을
+    반복할 뿐이다. 실측(이력 316건)에서 눈에 걸리는 0~2% 잡음은 3위 아래에 몰려 있고,
+    2위는 20~35%까지 올라간다(Edge-Loc ↔ Loc처럼 8×8에서 안 갈리는 쌍). 그래서 순위가 아니라
+    5% 바닥으로 자른다. 1위는 값에 상관없이 항상 남긴다.
+  */
+  const shownFamilies = verdict.familyScores.filter((s, i) => i === 0 || s.probability >= FAMILY_FLOOR_PCT / 100);
+  const hiddenFamilies = verdict.familyScores.length - shownFamilies.length;
 
   return (
     <div className="stack">
@@ -102,13 +113,19 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
 
         <div className="card-sub" style={{ marginBottom: 6 }}>계통별 확률</div>
         <ProbabilityBars
-          rows={verdict.familyScores.map((s) => ({
+          rows={shownFamilies.map((s) => ({
             id: s.id,
             label: FAMILIES[s.id].short,
             probability: s.probability,
           }))}
           topId={verdict.family}
         />
+        {hiddenFamilies > 0 && (
+          <p className="section-note" style={{ marginTop: 6, color: 'var(--text-muted)' }}>
+            나머지 {hiddenFamilies}계통은 {FAMILY_FLOOR_PCT}% 미만이라 접었다. 계통 확률은 9클래스를 묶은 값이라 보이는
+            막대만 더하면 100%가 되지 않는다.
+          </p>
+        )}
 
         <div className="banner info" style={{ marginTop: 12 }}>
           <span className="caveat-icon" aria-hidden>i</span>
@@ -228,16 +245,20 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         </Card>
       )}
 
+      {/*
+        9클래스 전부를 늘어놓으면 확률 0%인 후보가 화면 대부분을 차지한다.
+        patterns는 확률 내림차순이라 앞의 세 개가 곧 1~3순위다.
+      */}
       <Card
-        title="9클래스 확률"
+        title="불량 유형 확률"
         sub={
           verdict.model
-            ? '모델이 내는 원본 확률. 위의 계통 확률은 이걸 묶은 것이라 합이 보존된다.'
-            : '규칙 대체판이 만든 확률. 학습된 모델이 아니라 UI를 돌리기 위한 임시 값이다.'
+            ? '모델 원본 확률의 상위 3순위. 위의 계통 확률은 9클래스 전체를 묶은 것이라 합이 보존된다.'
+            : '규칙 대체판이 만든 확률의 상위 3순위. 학습된 모델이 아니라 UI를 돌리기 위한 임시 값이다.'
         }
       >
         <div className="stack" style={{ gap: 10 }}>
-          {verdict.patterns.map((p) => (
+          {verdict.patterns.slice(0, 3).map((p) => (
             <div key={p.id}>
               <div className="row" style={{ gap: 8 }}>
                 <strong style={{ fontSize: 13.5 }}>{PATTERN_LABEL[p.id]}</strong>
@@ -258,6 +279,9 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
             </div>
           ))}
         </div>
+        <p className="section-note" style={{ marginTop: 10, color: 'var(--text-muted)' }}>
+          나머지 {Math.max(0, verdict.patterns.length - 3)}개 클래스는 확률이 3순위보다 낮아 접었다.
+        </p>
       </Card>
 
       <Card title="판정 근거" sub="★는 이번 판정을 직접 민 피처">
@@ -286,30 +310,6 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         </div>
       </Card>
 
-      {(verdict.caveats.length > 0 || pairs.length > 0) && (
-        <Card title="이 판정의 한계" sub="못 하는 걸 못 한다고 말하는 것도 판정 결과의 일부다">
-          <div className="stack" style={{ gap: 8 }}>
-            {verdict.caveats.map((c) => (
-              <div className="caveat" key={c}>
-                <span className="caveat-icon" aria-hidden>!</span>
-                <div>{c}</div>
-              </div>
-            ))}
-            {pairs.map((p) => (
-              <div className="caveat" key={p.pair.join('-')}>
-                <span className="caveat-icon" aria-hidden>≈</span>
-                <div>
-                  <strong>
-                    {p.pair[0]} ↔ {p.pair[1]} 미분리
-                  </strong>
-                  <div style={{ marginTop: 2 }}>{p.reason}</div>
-                  <div style={{ marginTop: 2, color: 'var(--text-muted)' }}>가르려면: {p.needs}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
     </div>
   );
 }

@@ -103,7 +103,7 @@ export function ProcessTabs({ plan, checkedActions, onToggle }: Props) {
           <div className="card-sub" style={{ marginBottom: 6 }}>
             이 공정이 이번 후보 유형을 유발하지 않는다고 본 근거
           </div>
-          <div className="stack" style={{ gap: 6 }}>
+          <div className="stack sub-list" style={{ gap: 6 }}>
             {tab.exclusions.map((e) => (
               <div key={e.pattern} className="section-note" style={{ color: 'var(--text-muted)' }}>
                 <strong style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{PATTERN_LABEL[e.pattern]}</strong>{' '}
@@ -178,30 +178,45 @@ function CauseCard({
         </div>
       </div>
 
-      <div className="action-rationale">
-        <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>기전</strong>
-        {'  '}
-        {cause.mechanism.join('  →  ')}
-      </div>
-
-      <div className="action-rationale" style={{ marginTop: 4 }}>
-        <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>웨이퍼맵 형태</strong>
-        {'  '}
-        {cause.waferMap}
-      </div>
-
-      {cause.directional && (
-        <div className="action-rationale" style={{ marginTop: 4 }}>
-          <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>방향성</strong>
-          {'  '}
-          {cause.directional.label}
-          {cause.directional.kind === 'layout' && (
-            <span style={{ color: 'var(--text-muted)' }}>
-              {'  '}— 각도가 설비 배치에 달려 있어 실측 wafer map 없이는 방위를 못 박는다
-            </span>
+      {/*
+        기전 · 웨이퍼맵 형태 · 방향성 · 계측 방법은 모두 "항목 이름 → 값" 꼴이라
+        문단으로 늘어놓기보다 표로 세우는 편이 대조해 읽기 쉽다.
+      */}
+      <table className="data facts">
+        <tbody>
+          <tr>
+            <th scope="row">기전</th>
+            <td>{cause.mechanism.join('  →  ')}</td>
+          </tr>
+          <tr>
+            <th scope="row">웨이퍼맵 형태</th>
+            <td>{cause.waferMap}</td>
+          </tr>
+          {cause.directional && (
+            <tr>
+              <th scope="row">방향성</th>
+              <td>
+                {cause.directional.label}
+                {cause.directional.kind === 'layout' && (
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {' '}
+                    — 각도가 설비 배치에 달려 있어 실측 wafer map 없이는 방위를 못 박는다
+                  </span>
+                )}
+              </td>
+            </tr>
           )}
-        </div>
-      )}
+          {cause.metrology && (
+            <tr>
+              <th scope="row">계측 방법</th>
+              <td>
+                {cause.metrology}
+                <span style={{ color: 'var(--text-muted)' }}> — 대응 Log에 기록된 확인 계측</span>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
 
       {cause.supportNote && (
         <div className="reorder-note" style={{ borderLeftColor: cause.support === 'strong' ? 'var(--good)' : cause.support === 'weak' ? 'var(--serious)' : 'var(--series-1)' }}>
@@ -209,20 +224,11 @@ function CauseCard({
         </div>
       )}
 
-      {cause.metrology && (
-        <div className="action-rationale" style={{ marginTop: 4 }}>
-          <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>계측 방법</strong>
-          {'  '}
-          {cause.metrology}
-          <span style={{ color: 'var(--text-muted)' }}>{'  '}— 대응 Log에 기록된 확인 계측</span>
-        </div>
-      )}
-
       <div style={{ marginTop: 10 }}>
         <div className="card-sub" style={{ marginBottom: 4 }}>
           해결 · 즉시 대응 {cause.resolution.length > 0 && `(${doneCount}/${cause.resolution.length})`}
         </div>
-        <div className="stack" style={{ gap: 3 }}>
+        <div className="stack sub-list" style={{ gap: 3 }}>
           {cause.resolution.map((chk, i) => {
             const id = `${cause.id}#${i}`;
             return (
@@ -243,7 +249,7 @@ function CauseCard({
             — 오늘 하는 일이 아니라 공정 담당이 계획을 잡을 것
           </span>
         </div>
-        <ul className="action-checks">
+        <ul className="action-checks sub-list">
           {cause.improvement.map((r) => (
             <li key={r}>{r}</li>
           ))}
