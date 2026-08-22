@@ -823,3 +823,109 @@ pre.protocol {
   background: var(--grid);
   margin: 4px 0;
 }
+
+/* ── 보고서 마크다운 뷰어 ──────────────────────────────────────────────── */
+
+.md-view {
+  margin-top: 12px;
+  padding: 16px 18px;
+  max-height: 560px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.md-view > :first-child {
+  margin-top: 0;
+}
+
+.md-h {
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin: 18px 0 8px;
+}
+
+.md-h1 {
+  font-size: 17px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.md-h2 {
+  font-size: 15px;
+  margin-top: 22px;
+}
+
+.md-h3 {
+  font-size: 13.5px;
+}
+
+.md-h4 {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.md-p {
+  margin: 8px 0;
+}
+
+.md-hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 18px 0;
+}
+
+.md-list {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.md-list li {
+  margin-bottom: 3px;
+}
+
+/* 체크 항목은 글머리표 대신 체크박스가 머리를 맡는다 */
+.md-checks {
+  list-style: none;
+  padding-left: 14px;
+  border-left: 1px solid var(--grid);
+}
+
+.md-checks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.md-checks input {
+  margin-top: 4px;
+  flex-shrink: 0;
+  accent-color: var(--series-1);
+}
+
+.md-quote {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.md-quote .md-h {
+  margin-top: 0;
+  font-size: 13.5px;
+}
+
+.md-view .table-wrap {
+  margin: 10px 0;
+}
+
+table.md-table td {
+  white-space: normal;
+  line-height: 1.6;
+  vertical-align: top;
+}

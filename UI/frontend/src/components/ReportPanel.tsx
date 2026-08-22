@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
 import { generateReport } from '../services/report';
+import { MarkdownView } from './MarkdownView';
 import { ReportPngButton } from './ReportPngButton';
 import { FAMILIES } from '../config/taxonomy';
 import { Badge, Card } from './ui';
@@ -14,6 +15,8 @@ import { Badge, Card } from './ui';
  */
 export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan: DiagnosisPlan }) {
   const [open, setOpen] = useState(false);
+  /* 뷰어가 기본. 원문은 붙여넣기 전에 확인하려는 사람만 본다 */
+  const [raw, setRaw] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pngUrl, setPngUrl] = useState<string | null>(null);
 
@@ -106,9 +109,36 @@ export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan
       )}
 
       {open && (
-        <pre className="protocol" style={{ marginTop: 12, maxHeight: 460, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
-          {report.markdown}
-        </pre>
+        <>
+          <div className="row" style={{ gap: 5, marginTop: 12 }} role="group" aria-label="미리보기 형식">
+            {([
+              [false, '뷰어'],
+              [true, '마크다운 원문'],
+            ] as const).map(([v, label]) => (
+              <button
+                key={label}
+                className="btn btn-sm"
+                aria-pressed={raw === v}
+                onClick={() => setRaw(v)}
+                style={{
+                  borderColor: raw === v ? 'var(--series-1)' : 'var(--border-strong)',
+                  background: raw === v ? 'var(--surface-sunken)' : 'var(--surface-raised)',
+                  fontWeight: raw === v ? 600 : 400,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {raw ? (
+            <pre className="protocol" style={{ marginTop: 12, maxHeight: 560, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+              {report.markdown}
+            </pre>
+          ) : (
+            <MarkdownView markdown={report.markdown} />
+          )}
+        </>
       )}
     </Card>
   );
