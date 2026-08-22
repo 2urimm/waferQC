@@ -60,13 +60,13 @@ export interface PatternPreset {
 export const PATTERN_PRESETS: PatternPreset[] = [
   {
     id: 'normal',
-    label: '정상',
+    label: 'None',
     intent: '배경 산발만. 계통 패턴이 안 잡히는지 확인.',
     build: (seed) => speckle(blankWafer(), mulberry32(seed), 0.02),
   },
   {
     id: 'center',
-    label: '중심부 (Center)',
+    label: 'Center',
     intent: '반경 무게중심이 안쪽으로 들어가고 최내측 구간이 차 있는지.',
     build: (seed) => {
       const rng = mulberry32(seed);
@@ -83,7 +83,7 @@ export const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: 'donut',
-    label: '도넛 (Donut)',
+    label: 'Donut',
     intent: '가운데가 비고 중간 반경만 찬 모양. Center와 얼마나 갈리는지 보는 자리.',
     build: () => {
       const m = blankWafer();
@@ -98,7 +98,7 @@ export const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: 'edge-ring',
-    label: '가장자리 링 (Edge-Ring)',
+    label: 'Edge-Ring',
     intent: '외곽 각도 분산이 1에 가깝게 나오는지.',
     build: () => {
       const m = blankWafer();
@@ -112,7 +112,7 @@ export const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: 'edge-loc',
-    label: '가장자리 국부 (Edge-Loc)',
+    label: 'Edge-Loc',
     intent: '외곽인데 한쪽에만 몰린 경우. 방위가 원인 표의 6시 서명과 맞는지 보는 자리.',
     build: () => {
       const m = blankWafer();
@@ -127,7 +127,7 @@ export const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: 'loc',
-    label: '국부 (Loc)',
+    label: 'Loc',
     intent: '단일 군집 점유율이 지배적이고 이방성은 낮은지.',
     build: () => {
       const m = blankWafer();
@@ -138,7 +138,7 @@ export const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: 'scratch',
-    label: '스크래치 (Scratch)',
+    label: 'Scratch',
     intent: '대각 선형. 8-연결로 한 덩어리가 되고 이방성이 1에 가까운지.',
     build: () => {
       const m = blankWafer();
@@ -148,7 +148,7 @@ export const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: 'random',
-    label: '무작위 (Random)',
+    label: 'Random',
     intent: '구조 없이 흩어졌을 때 군집 수가 올라가는지.',
     build: (seed) => {
       const rng = mulberry32(seed);
@@ -168,7 +168,7 @@ export const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: 'near-full',
-    label: '전면 (Near-full)',
+    label: 'Near-full',
     intent: '밀도가 임계를 넘고 최내측까지 차면 Near-full이 잡히는지.',
     build: (seed) => {
       const rng = mulberry32(seed);

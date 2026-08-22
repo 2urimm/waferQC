@@ -242,7 +242,7 @@ function draw({ inspection, plan, processLimit = 3 }: ReportImageOptions, canvas
   ry += 26;
   g.font = font(13);
   g.fillStyle = C.ink2;
-  g.fillText(`모델 1순위: ${PATTERN_LABEL[verdict.top]} (${verdict.top}) ${pct(verdict.topScore)}`, rx, ry);
+  g.fillText(`모델 1순위: ${PATTERN_LABEL[verdict.top]} ${pct(verdict.topScore)}`, rx, ry);
 
   ry += 22;
   g.font = font(12.5);

@@ -929,3 +929,9 @@ table.md-table td {
   line-height: 1.6;
   vertical-align: top;
 }
+
+/* 설명이 툴팁으로 붙어 있는 항목 — 올려 볼 게 있다는 걸 눈으로 알려 준다 */
+.has-note {
+  border-bottom: 1px dotted var(--border-strong);
+  cursor: help;
+}

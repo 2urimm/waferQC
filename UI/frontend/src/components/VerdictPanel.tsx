@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { REVIEW_REASON_COPY } from '../config/model';
 import { CONFIDENCE_COPY, FAMILIES, confidenceBand } from '../config/taxonomy';
 import { PATTERN_LABEL } from '../domain/causes';
@@ -49,6 +50,8 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
     2위는 20~35%까지 올라간다(Edge-Loc ↔ Loc처럼 8×8에서 안 갈리는 쌍). 그래서 순위가 아니라
     5% 바닥으로 자른다. 1위는 값에 상관없이 항상 남긴다.
   */
+  const [driversOpen, setDriversOpen] = useState(false);
+
   const shownFamilies = verdict.familyScores.filter((s, i) => i === 0 || s.probability >= FAMILY_FLOOR_PCT / 100);
   const hiddenFamilies = verdict.familyScores.length - shownFamilies.length;
 
@@ -98,7 +101,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         </div>
 
         <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
-          모델 1순위: {PATTERN_LABEL[verdict.top]} ({verdict.top}) {pct(verdict.topScore)}
+          모델 1순위: {PATTERN_LABEL[verdict.top]} {pct(verdict.topScore)}
           {verdict.review.note && ` · ${verdict.review.note}`}
         </p>
 
@@ -173,7 +176,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
               <>
                 <dt>보조 모델 V3</dt>
                 <dd>
-                  {PATTERN_LABEL[verdict.model.auxiliaryPrediction]} ({verdict.model.auxiliaryPrediction})
+                  {PATTERN_LABEL[verdict.model.auxiliaryPrediction]}
                   {verdict.model.auxiliaryScore !== null && ` ${pct(verdict.model.auxiliaryScore)}`}
                   {verdict.model.auxiliaryPrediction !== verdict.top && (
                     <span style={{ color: 'var(--serious)' }}> — 주 모델과 다름</span>
@@ -261,16 +264,20 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
           {verdict.patterns.slice(0, 3).map((p) => (
             <div key={p.id}>
               <div className="row" style={{ gap: 8 }}>
-                <strong style={{ fontSize: 13.5 }}>{PATTERN_LABEL[p.id]}</strong>
-                <span className="mono" style={{ color: 'var(--text-muted)' }}>{p.id}</span>
+                <strong className="mono" style={{ fontSize: 13.5 }}>{PATTERN_LABEL[p.id]}</strong>
                 <span style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums', fontSize: 13 }}>
                   {pct(p.probability)}
                 </span>
               </div>
+              {/*
+                막대 길이는 전체 100% 중 이 클래스가 차지하는 몫이다.
+                계통 안에서의 몫(withinFamily)으로 그리면 10%짜리가 꽉 찬 막대로 보여
+                옆의 숫자와 어긋난다.
+              */}
               <div className="prob-track" style={{ height: 8, marginTop: 3 }}>
                 <div
                   className="prob-fill top"
-                  style={{ width: `${Math.max(1, p.withinFamily * 100)}%`, opacity: 0.35 + p.withinFamily * 0.65 }}
+                  style={{ width: `${Math.max(1, p.probability * 100)}%`, opacity: 0.35 + p.probability * 0.65 }}
                 />
               </div>
               <p className="section-note" style={{ marginTop: 5, color: 'var(--text-muted)' }}>
@@ -284,30 +291,53 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         </p>
       </Card>
 
-      <Card title="판정 근거" sub="★는 이번 판정을 직접 민 피처">
-        <div className="table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>피처</th>
-                <th>값</th>
-                <th style={{ whiteSpace: 'normal' }}>설명</th>
-              </tr>
-            </thead>
-            <tbody>
-              {verdict.drivers.map((d) => (
-                <tr key={d.feature}>
-                  <td style={{ fontWeight: d.effect === 'supports' ? 600 : 400 }}>
-                    {d.effect === 'supports' && <span aria-label="판정 근거">★ </span>}
-                    {d.label}
-                  </td>
-                  <td className="mono">{d.value}</td>
-                  <td style={{ whiteSpace: 'normal', color: 'var(--text-muted)', minWidth: 260 }}>{d.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/*
+        판정 근거는 매 판정마다 펼쳐 볼 성질이 아니다 — 결론이 미심쩍을 때 여는 자리다.
+        기본은 접어 두고, 피처 설명은 열마다 깔지 않고 이름에 붙여 둔다.
+      */}
+      <Card
+        title="판정 근거"
+        sub="공간 통계 실제 값 · ★는 이번 판정을 직접 민 피처"
+        actions={
+          <button className="btn btn-sm" onClick={() => setDriversOpen((v) => !v)}>
+            {driversOpen ? '접기' : `펼치기 (${verdict.drivers.length})`}
+          </button>
+        }
+      >
+        {driversOpen ? (
+          <>
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>피처</th>
+                    <th>값</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {verdict.drivers.map((d) => (
+                    <tr key={d.feature}>
+                      <td style={{ fontWeight: d.effect === 'supports' ? 600 : 400 }}>
+                        {d.effect === 'supports' && <span aria-label="판정 근거">★ </span>}
+                        <span className="has-note" title={d.note}>
+                          {d.label}
+                        </span>
+                      </td>
+                      <td className="mono">{d.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
+              피처 이름에 커서를 올리면 그 값이 무엇을 재는지 설명이 뜬다.
+            </p>
+          </>
+        ) : (
+          <p className="section-note" style={{ color: 'var(--text-muted)' }}>
+            판정이 미심쩍을 때 열어 볼 것. 반경 · 군집 · 이방성 · 방위 등 {verdict.drivers.length}개 값이 들어 있다.
+          </p>
+        )}
       </Card>
 
     </div>

@@ -288,6 +288,6 @@ export function describeCandidates(patterns: PatternCandidate[], limit = 3): str
   return patterns
     .filter((p) => p.probability > 0.02)
     .slice(0, limit)
-    .map((p) => `${PATTERN_LABEL[p.id]}(${p.id}) ${(p.probability * 100).toFixed(0)}%`)
+    .map((p) => `${PATTERN_LABEL[p.id]} ${(p.probability * 100).toFixed(0)}%`)
     .join(', ');
 }

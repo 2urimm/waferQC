@@ -72,7 +72,7 @@ export function generateReport({ inspection, plan, processLimit = 4 }: ReportOpt
   L.push(`**${family.label}** — 확률 ${pct(top.probability)}, 신뢰도 ${CONFIDENCE_COPY[band].label}`);
   L.push('');
   L.push(
-    `모델 1순위 클래스: ${PATTERN_LABEL[verdict.top]} (${verdict.top}) ${pct(verdict.topScore)}` +
+    `모델 1순위 클래스: ${PATTERN_LABEL[verdict.top]} ${pct(verdict.topScore)}` +
       (verdict.review.required ? ' · **검토 필요**' : ' · 자동 채택 가능'),
   );
   L.push('');
@@ -101,7 +101,7 @@ export function generateReport({ inspection, plan, processLimit = 4 }: ReportOpt
   L.push(`| 패턴 | 확률 | 근거 |`);
   L.push(`| --- | ---: | --- |`);
   for (const p of verdict.patterns) {
-    L.push(`| ${PATTERN_LABEL[p.id]} (${p.id}) | ${pct(p.probability)} | ${p.reason} |`);
+    L.push(`| ${PATTERN_LABEL[p.id]} | ${pct(p.probability)} | ${p.reason} |`);
   }
   L.push('');
 
@@ -184,7 +184,7 @@ export function generateReport({ inspection, plan, processLimit = 4 }: ReportOpt
     L.push('');
     L.push(
       `후보에 올랐으나 원인 매핑이 아직 없는 패턴: ${plan.patternsWithoutMapping
-        .map((p) => `${PATTERN_LABEL[p]} (${p})`)
+        .map((p) => PATTERN_LABEL[p])
         .join(', ')}. 원인이 없다는 뜻이 아니라 표가 아직 안 채워진 것이므로, 해당 패턴이 유력하면 수동 분석이 필요하다.`,
     );
     L.push('');
