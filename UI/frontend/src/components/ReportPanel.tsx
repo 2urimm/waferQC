@@ -3,6 +3,7 @@ import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
 import { generateReport } from '../services/report';
 import { renderReportPng } from '../services/reportImage';
+import { FAMILIES } from '../config/taxonomy';
 import { Badge, Card } from './ui';
 
 /**
@@ -67,7 +68,10 @@ export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan
   return (
     <Card
       title="점검 보고서"
-      sub="판정 · 근거 · 한계 · 공정별 점검 순서를 그대로 실행 가능한 형태로"
+      sub={`${inspection.lotId} · 웨이퍼 ${inspection.waferNo} · ${new Date(inspection.capturedAt).toLocaleString(
+        'ko-KR',
+        { dateStyle: 'medium', timeStyle: 'short' },
+      )}`}
       actions={
         <>
           <button className="btn btn-sm" onClick={() => setOpen((v) => !v)}>
@@ -86,6 +90,10 @@ export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan
       }
     >
       <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+        <Badge color={inspection.verdict.family === 'NORMAL' ? '--good' : '--serious'} strong>
+          {FAMILIES[inspection.verdict.family].short}
+        </Badge>
+        {inspection.caseId && <Badge>대응 Log {inspection.caseId}</Badge>}
         <Badge>{report.markdown.split('\n').length}줄</Badge>
         <Badge>공정 {plan.tabs.length}개</Badge>
       </div>

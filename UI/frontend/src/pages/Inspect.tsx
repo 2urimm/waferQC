@@ -9,7 +9,7 @@ import { DEFAULT_MODEL_SERVER } from '../services/inference';
 import { useApp } from '../state/AppStore';
 
 export function Inspect() {
-  const { state, patch, setCell, applyPreset, clearDraft, runInspection, toggleAction, useModelEngine, useRuleEngine } =
+  const { state, patch, setCell, applyPreset, clearDraft, runInspection, setTab, toggleAction, useModelEngine, useRuleEngine } =
     useApp();
   const { draft, verdict, error, running } = state;
 
@@ -167,6 +167,26 @@ export function Inspect() {
           )}
         </div>
       </div>
+
+      {/*
+        보고서는 상단 탭으로 빠져 있다. 판정할 때마다 그 탭의 대상이 방금 판정으로 갈아끼워지는데,
+        탭을 옮기면 맥락이 끊기므로 여기서 바로 건너갈 수 있게 한다.
+      */}
+      {verdict && current && (
+        <Card
+          title="점검 보고서"
+          sub={`이 판정(${current.lotId} · 웨이퍼 ${current.waferNo})이 보고서 탭의 대상이다`}
+          actions={
+            <button className="btn btn-sm btn-primary" onClick={() => setTab('report')}>
+              보고서 보기 →
+            </button>
+          }
+        >
+          <p className="section-note" style={{ color: 'var(--text-muted)' }}>
+            판정을 다시 실행하면 보고서도 그 결과로 바뀐다. 따로 만들 필요는 없다.
+          </p>
+        </Card>
+      )}
 
       {/* ── 원인 추적 (반도체 불량 분석 개선안.xlsx) ── */}
       {verdict && plan && (

@@ -10,7 +10,7 @@ import { Badge, Card, Empty } from '../components/ui';
 import { useApp } from '../state/AppStore';
 
 export function History() {
-  const { state, patch, toggleAction, setResolution, reseedHistory } = useApp();
+  const { state, patch, setTab, toggleAction, setResolution, reseedHistory } = useApp();
   const [filter, setFilter] = useState<FamilyId | 'ALL'>('ALL');
   const [lotQuery, setLotQuery] = useState('');
 
@@ -162,7 +162,19 @@ export function History() {
             onToggle={(actionId) => toggleAction(selected.id, actionId)}
           />
 
-          {/* 보고서는 상단 '보고서' 탭에서 낸다 — 선택한 이력이 그대로 보고서 대상이 된다 */}
+          <Card
+            title="점검 보고서"
+            sub={`고른 이력(${selected.lotId} · 웨이퍼 ${selected.waferNo})이 보고서 탭의 대상이다`}
+            actions={
+              <button className="btn btn-sm btn-primary" onClick={() => setTab('report')}>
+                보고서 보기 →
+              </button>
+            }
+          >
+            <p className="section-note" style={{ color: 'var(--text-muted)' }}>
+              다른 행을 고르면 보고서도 그 건으로 바뀐다.
+            </p>
+          </Card>
         </>
       )}
     </div>

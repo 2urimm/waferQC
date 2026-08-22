@@ -20,6 +20,11 @@ export function Report() {
       <Card title="점검 보고서">
         <Empty>
           아직 보고서로 만들 판정이 없습니다.
+          <div style={{ marginTop: 6 }}>
+            검사 탭에서 패턴을 그리고 <strong>판정하기</strong>를 누르면 그 결과가 여기 보고서가 됩니다.
+            <br />
+            이력 탭에서 지난 건을 골라도 됩니다.
+          </div>
           <div style={{ marginTop: 10 }}>
             <button className="btn btn-sm btn-primary" onClick={() => setTab('inspect')}>
               검사 탭으로 가기
@@ -30,5 +35,12 @@ export function Report() {
     );
   }
 
-  return <ReportPanel inspection={current} plan={plan} />;
+  return (
+    <div className="stack">
+      <ReportPanel inspection={current} plan={plan} />
+      <p className="section-note" style={{ color: 'var(--text-muted)' }}>
+        검사 탭에서 판정을 다시 실행하거나 이력 탭에서 다른 건을 고르면 이 보고서가 그 결과로 바뀐다.
+      </p>
+    </div>
+  );
 }
