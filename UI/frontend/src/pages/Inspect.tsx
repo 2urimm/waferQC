@@ -6,7 +6,7 @@ import { ReportPngButton } from '../components/ReportPngButton';
 import { VerdictPanel } from '../components/VerdictPanel';
 import { WaferGrid, WaferLegend } from '../components/WaferGrid';
 import { Badge, Banner, Card, Empty } from '../components/ui';
-import { DEFAULT_MODEL_SERVER } from '../services/inference';
+import { DEFAULT_MODEL_SERVER, isLocalView } from '../services/inference';
 import { useApp } from '../state/AppStore';
 
 export function Inspect() {
@@ -55,11 +55,22 @@ export function Inspect() {
         {state.modelServerStatus === 'down' && (
           <Banner kind="warn">
             모델 서버에 연결하지 못했습니다 — {state.modelServerDetail}
-            <div style={{ marginTop: 6, color: 'var(--text-muted)' }}>
-              <code className="mono">UI/backend/wafer_final_package_v2</code> 폴더에서 서버를 먼저 띄우세요:
-              <br />
-              <code className="mono">.venv\Scripts\python serve.py</code>
-            </div>
+            {/*
+              남의 화면에 "이 명령어를 실행하세요"를 띄워 봐야 실행할 수 없다.
+              그쪽에서 할 수 있는 건 화면 주인에게 알리는 것뿐이다.
+            */}
+            {isLocalView() ? (
+              <div style={{ marginTop: 6, color: 'var(--text-muted)' }}>
+                <code className="mono">UI/backend/wafer_final_package_v2</code> 폴더에서 서버를 먼저 띄우세요:
+                <br />
+                <code className="mono">.venv\Scripts\python serve.py</code>
+              </div>
+            ) : (
+              <div style={{ marginTop: 6, color: 'var(--text-muted)' }}>
+                이 화면을 띄운 컴퓨터에서 모델 서버가 꺼져 있습니다. 화면을 공유한 사람에게 알려 주세요. 그때까지
+                판정은 <strong>규칙 대체판</strong>에서 나오며, 학습된 모델의 결과가 아닙니다.
+              </div>
+            )}
           </Banner>
         )}
       </Card>

@@ -163,7 +163,27 @@ export async function probeModelServer(baseUrl: string): Promise<{ ok: boolean; 
   }
 }
 
-export const DEFAULT_MODEL_SERVER = 'http://127.0.0.1:8077';
+/**
+ * 이 화면이 localhost로 열렸는가.
+ *
+ * 아니라면(= 터널·LAN 주소로 남이 보고 있다면) 모델 서버 주소의 127.0.0.1은
+ * 보는 사람 컴퓨터를 가리키게 되어 절대 붙지 않는다. 그 상태로 두면 아무 경고 없이
+ * 규칙 대체판 판정으로 떨어져서, 받는 쪽은 그걸 실제 모델 판정으로 읽는다.
+ *
+ * node(검증 스크립트)에서는 window가 없으므로 로컬로 본다.
+ */
+export function isLocalView(): boolean {
+  if (typeof window === 'undefined') return true;
+  return ['localhost', '127.0.0.1', '::1', '[::1]'].includes(window.location.hostname);
+}
+
+/**
+ * 기본 모델 서버 주소.
+ *
+ * 남이 보고 있을 때는 개발 서버의 /model 프록시(vite.config.ts)를 기본으로 쓴다.
+ * 터널 주소를 받은 사람이 아무것도 안 고쳐도 실제 모델 판정을 보게 된다.
+ */
+export const DEFAULT_MODEL_SERVER = isLocalView() ? 'http://127.0.0.1:8077' : '/model';
 
 let active: InferenceEngine = new RuleInferenceEngine();
 
