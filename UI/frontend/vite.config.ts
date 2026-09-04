@@ -23,6 +23,16 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/model/, ''),
       },
+      /*
+       * 아두이노 시리얼 브리지(127.0.0.1:8078). 모델 서버와 같은 이유로 중계한다 —
+       * 브라우저는 COM 포트를 못 열고, 원격에서 보는 사람의 127.0.0.1 에는 브리지가 없다.
+       * 브리지가 안 떠 있으면 이 경로가 502 를 내고 화면은 "브리지 없음"으로 표시한다.
+       */
+      '/hw': {
+        target: 'http://127.0.0.1:8078',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/hw/, ''),
+      },
     },
     watch: {
       /*

@@ -148,4 +148,12 @@ export interface Inspection {
   checkedActions: string[];
   /** 엔지니어가 남긴 결론 */
   resolution?: string;
+  /**
+   * 이 맵이 어디서 왔는가.
+   *
+   * 지금 새로 만들어지는 기록은 전부 'hardware' 다 — 판정 입력은 읽기 아두이노가
+   * 스캔해 올린 맵 하나뿐이다. 'draw'(화면에 그린 맵)는 하드웨어를 붙이기 전에
+   * 쓰던 경로라 남겨만 둔다. 값이 없으면 그 이전의 기록이다 (시드 데이터 포함).
+   */
+  mapSource?: 'draw' | 'hardware';
 }

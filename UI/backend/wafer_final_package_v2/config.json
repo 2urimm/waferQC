@@ -1,0 +1,51 @@
+{
+  "class_names": [
+    "Center",
+    "Donut",
+    "Edge-Loc",
+    "Edge-Ring",
+    "Loc",
+    "Random",
+    "Scratch",
+    "Near-full",
+    "None"
+  ],
+  "none_index": 8,
+  "v3_binary_threshold_fallback": 0.68,
+  "balanced_none_review_threshold": 0.49,
+  "classwise_score_thresholds": {
+    "Center": 1.01,
+    "Donut": 1.01,
+    "Edge-Loc": 1.01,
+    "Edge-Ring": 0.3,
+    "Loc": 0.74,
+    "Random": 1.01,
+    "Scratch": 1.01,
+    "Near-full": 1.01,
+    "None": 0.3
+  },
+  "always_review_classes": [
+    "Random",
+    "Near-full"
+  ],
+  "high_defect_cell_threshold": 50,
+  "direction_target_classes": [
+    "Scratch",
+    "Loc",
+    "Edge-Loc"
+  ],
+  "input": {
+    "shape": [
+      8,
+      8
+    ],
+    "values": {
+      "0": "outside wafer",
+      "1": "normal die",
+      "2": "defect die"
+    },
+    "serial_order": "row-major",
+    "row_0": "top",
+    "col_0": "left"
+  }
+}

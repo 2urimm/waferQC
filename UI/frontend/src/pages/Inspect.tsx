@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { buildPlan } from '../domain/plan';
 import { PATTERN_PRESETS, README_EXAMPLES } from '../domain/patterns';
+import { HardwarePanel } from '../components/HardwarePanel';
 import { ProcessTabs } from '../components/ProcessTabs';
 import { ReportPanel } from '../components/ReportPanel';
 import { VerdictPanel } from '../components/VerdictPanel';
@@ -10,8 +11,8 @@ import { DEFAULT_MODEL_SERVER, isLocalView } from '../services/inference';
 import { useApp } from '../state/AppStore';
 
 export function Inspect() {
-  const { state, patch, setCell, applyPreset, clearDraft, runInspection, toggleAction, useModelEngine, useRuleEngine } =
-    useApp();
+  // 판정 버튼은 HardwarePanel 안, 판정에 실제로 들어가는 맵 옆에 있다.
+  const { state, patch, setCell, applyPreset, clearDraft, toggleAction, useModelEngine, useRuleEngine } = useApp();
   const { draft, verdict, error, running } = state;
 
   const plan = useMemo(() => (verdict ? buildPlan(verdict) : null), [verdict]);
@@ -79,13 +80,8 @@ export function Inspect() {
         {/* ── 입력 ── */}
         <div className="stack">
           <Card
-            title="패턴 입력"
-            sub="드래그로 불량 die를 찍고, 우클릭(또는 Ctrl+클릭)으로 되돌린다."
-            actions={
-              <button className="btn btn-sm btn-primary" onClick={runInspection} disabled={running}>
-                {running ? '판정 중…' : '판정하기'}
-              </button>
-            }
+            title="패턴 선택"
+            sub="여기서 찍은 패턴이 쓰기 아두이노로 나가 실물 보드에 걸린다. 판정은 그걸 되읽은 아래쪽 맵으로 한다."
           >
             <WaferGrid map={draft} editable={!running} onCell={setCell} />
             <WaferLegend />
@@ -142,6 +138,8 @@ export function Inspect() {
               보내고 있다는 뜻이다.
             </p>
           </Card>
+
+          <HardwarePanel />
 
           <Card title="로트 정보">
             <div className="row" style={{ gap: 10 }}>

@@ -5,11 +5,17 @@ dist/
 .DS_Store
 *.tsbuildinfo
 
-# 팀에서 받은 모델 패키지 — 체크포인트(.pt)와 venv가 수백 MB라 git에 넣지 않는다.
-# 모델 파일은 별도로 공유하고, 이 저장소는 UI 소스와 data/ 원본만 담는다.
-# 폴더·파일 이름은 받은 그대로 둔다 (UI/backend/wafer_final_package_v2).
-UI/backend/
+# backend 는 소스만 담는다. 예전엔 'UI/backend/' 로 폴더째 뺐는데, 그러면 우리가 쓴
+# serial_bridge.py 까지 같이 묻혔다. 무거운 둘만 콕 집어서 뺀다.
+#
+# .venv 는 652MB 에 파일 22,000개고 그 안에 290MB 짜리가 있다 — GitHub 은 100MB 넘는
+# 파일을 거부하므로 애초에 올라가지 않는다. requirements.txt 로 다시 만들면 된다.
+UI/backend/wafer_final_package_v2/.venv/
+# 체크포인트(.pt) 22MB. 팀에서 받은 것이고 별도로 공유한다 — git 히스토리에 한번 들어가면
+# 빼기 어려우니 여기서 막는다. 저장소에 같이 두려면 이 두 줄을 지우면 된다.
+UI/backend/wafer_final_package_v2/models/
 *.pt
+__pycache__/
 *.zip
 
 # esbuild가 Windows에서 /dev/null을 실제 파일로 만들어 버린 흔적
