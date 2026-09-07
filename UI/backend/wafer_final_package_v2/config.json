@@ -28,7 +28,7 @@
     "Random",
     "Near-full"
   ],
-  "high_defect_cell_threshold": 50,
+  "high_defect_cell_threshold": 10,
   "direction_target_classes": [
     "Scratch",
     "Loc",

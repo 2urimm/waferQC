@@ -92,8 +92,18 @@ export const LOW_PRIMARY_SCORE = 0.6;
 /** 이 클래스로 판정되면 확률과 무관하게 항상 검토. 노트북 ALWAYS_REVIEW_CLASSES. */
 export const ALWAYS_REVIEW_CLASSES: DefectPatternId[] = ['Random', 'Near-full'];
 
-/** 불량 칸이 이 개수 이상이면 검토 (64칸 중). 노트북 HIGH_DEFECT_CELL_THRESHOLD. */
-export const HIGH_DEFECT_CELL_THRESHOLD = 50;
+/**
+ * 불량 칸이 이 개수 이상이고 판정이 None/Random 이면 검토.
+ * config.json 의 high_defect_cell_threshold 와 같은 값이어야 한다.
+ *
+ * ⚠ 기준은 64칸이 아니라 **웨이퍼 안 52칸**이다. 원래 값 50은 52칸의 96%를 요구해서
+ *   사실상 발동하지 않았다. 실측(산발 패턴 30회 x 불량칸수): 24칸(46%)에서 28/30이
+ *   'None' 판정에 그중 28건이 자동 채택, 48칸(92%)에서도 24/30이 'None' 이었다.
+ *   10칸 = 52칸의 약 19%. 정상이라 판정된 웨이퍼의 die 5개 중 1개가 불량이면
+ *   수율상 정상일 수 없으므로 사람이 봐야 한다.
+ *   뭉친 패턴은 어느 크기에서도 'None' 이 안 나오므로(0/30) 오탐이 늘지 않는다.
+ */
+export const HIGH_DEFECT_CELL_THRESHOLD = 10;
 
 /** 'None' 판정인데 결함 근거가 있을 때의 검토 임계. 노트북 BALANCED_NONE_REVIEW_THRESHOLD. */
 export const NONE_REVIEW_THRESHOLD = 0.5;
@@ -160,7 +170,7 @@ export const REVIEW_REASON_COPY: Record<ReviewReason, { label: string; detail: s
     detail: '8×8 해상도에서 인접 클래스와 갈리지 않는 구간이다. 계통까지만 신뢰하고 세부 클래스는 후보로 볼 것.',
   },
   extreme_defect_density: {
-    label: '불량 밀도 극단',
-    detail: `불량 칸이 ${HIGH_DEFECT_CELL_THRESHOLD}칸 이상이다. 실제 전면 불량일 수도 있지만 계측계 고장도 같은 모양이므로 계측부터 배제할 것.`,
+    label: '정상 판정인데 불량 밀도가 높음',
+    detail: `정상(또는 산발)으로 판정했지만 불량 칸이 ${HIGH_DEFECT_CELL_THRESHOLD}칸 이상이다. 웨이퍼 안 52칸 기준으로 die 5개 중 1개 이상이 불량이라는 뜻이라 수율상 정상일 수 없다. 실제 전면 불량일 수도 있고 계측계 고장도 같은 모양이므로 계측부터 배제할 것.`,
   },
 };
