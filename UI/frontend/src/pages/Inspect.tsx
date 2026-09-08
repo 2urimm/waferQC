@@ -7,13 +7,21 @@ import { ReportPanel } from '../components/ReportPanel';
 import { VerdictPanel } from '../components/VerdictPanel';
 import { WaferGrid, WaferLegend } from '../components/WaferGrid';
 import { Badge, Banner, Card, Empty } from '../components/ui';
+import { mismatchCount } from '../services/deviceBridge';
 import { DEFAULT_MODEL_SERVER, isLocalView } from '../services/inference';
 import { useApp } from '../state/AppStore';
 
 export function Inspect() {
-  // 판정 버튼은 HardwarePanel 안, 판정에 실제로 들어가는 맵 옆에 있다.
-  const { state, patch, setCell, applyPreset, clearDraft, toggleAction, useModelEngine, useRuleEngine } = useApp();
-  const { draft, verdict, error, running } = state;
+  /*
+    판정 버튼은 사람이 패턴을 만드는 자리, 즉 '패턴 선택' 카드 안에 둔다.
+    되읽은 맵은 읽기 보드의 LED 매트릭스가 실물로 보여주므로 화면에서 격자를 한 번 더
+    그리지 않는다. 대신 버튼 옆에 왕복 상태(어긋난 칸 수)를 붙여, 무엇으로 판정하는지가
+    누르는 자리에서 보이게 한다.
+  */
+  const { state, patch, setCell, applyPreset, clearDraft, toggleAction, runInspection, useModelEngine, useRuleEngine } =
+    useApp();
+  const { draft, hwMap, verdict, error, running } = state;
+  const mismatch = mismatchCount(draft, hwMap);
 
   const plan = useMemo(() => (verdict ? buildPlan(verdict) : null), [verdict]);
   const current = state.history.find((i) => i.id === state.selectedInspectionId) ?? null;
@@ -81,7 +89,7 @@ export function Inspect() {
         <div className="stack">
           <Card
             title="패턴 선택"
-            sub="여기서 찍은 패턴이 쓰기 아두이노로 나가 실물 보드에 걸린다. 판정은 그걸 되읽은 아래쪽 맵으로 한다."
+            sub="여기서 찍은 패턴이 쓰기 아두이노로 나가 실물 보드에 걸린다. 판정은 읽기 아두이노가 그 보드를 되읽은 맵으로 하고, 그 맵은 읽기 보드의 LED 매트릭스에 실물로 뜬다."
           >
             <WaferGrid map={draft} editable={!running} onCell={setCell} />
             <WaferLegend />
@@ -137,6 +145,45 @@ export function Inspect() {
               <code className="mono"> python app.py --manual</code> 과 같은 판정이 나와야 한다 — 다르면 UI가 뭔가 잘못
               보내고 있다는 뜻이다.
             </p>
+
+            <div className="divider" style={{ margin: '12px 0' }} />
+
+            {/*
+              onClick={runInspection} 로 넘기면 클릭 이벤트가 source 인자로 들어가 'draw' 로 샌다.
+              하드웨어가 붙어 있으면 판정 입력은 언제나 되읽은 맵이고, 안 붙어 있을 때만
+              사용자가 직접 누르는 우회 버튼으로 바뀐다 — 조용히 대체되는 경로는 없다.
+            */}
+            {hwMap ? (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => runInspection('hardware')}
+                  disabled={running}
+                >
+                  {running ? '판정 중…' : '이 패턴으로 판정하기'}
+                </button>
+                <p className="section-note" style={{ marginTop: 6, color: 'var(--text-muted)' }}>
+                  쓰기 보드로 내보낸 뒤 <strong>읽기 보드가 되읽은 맵</strong>으로 판정한다.{' '}
+                  {mismatch === 0 ? (
+                    <>왕복이 온전하다 — 어긋난 칸 0.</>
+                  ) : (
+                    <>
+                      지금 보낸 맵과 <strong>{mismatch}칸</strong>이 다르다. 그 차이까지 그대로 판정에 들어간다.
+                    </>
+                  )}
+                </p>
+              </>
+            ) : (
+              <>
+                <button className="btn" onClick={() => runInspection('draw')} disabled={running}>
+                  {running ? '판정 중…' : '하드웨어 없이 이 패턴으로 판정'}
+                </button>
+                <p className="section-note" style={{ marginTop: 6, color: 'var(--text-muted)' }}>
+                  읽기 보드가 아직 맵을 올리지 않아 화면에 그린 맵을 그대로 모델에 넣는다. 되읽기 검증이 빠진
+                  판정이고, 이력에도 그렇게 남는다.
+                </p>
+              </>
+            )}
           </Card>
 
           <HardwarePanel />

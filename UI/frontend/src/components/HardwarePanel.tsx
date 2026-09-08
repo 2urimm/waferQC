@@ -1,7 +1,6 @@
 import { CELL_DEFECT } from '../config/model';
 import { mismatchCount } from '../services/deviceBridge';
 import { useApp } from '../state/AppStore';
-import { WaferGrid } from './WaferGrid';
 import { Badge, Banner, Card, Empty } from './ui';
 
 /**
@@ -19,8 +18,8 @@ import { Badge, Banner, Card, Empty } from './ui';
  * 어긋난 칸 수를 항상 띄우는 이유가 이것이다.
  */
 export function HardwarePanel() {
-  const { state, patch, pushToHardware, reconnectHardware, runInspection } = useApp();
-  const { hw, hwMap, bridgeStatus, bridgeDetail, writeError, draft, running } = state;
+  const { state, patch, pushToHardware, reconnectHardware } = useApp();
+  const { hw, hwMap, bridgeStatus, bridgeDetail, writeError, draft } = state;
 
   const readOk = !!hw?.read.connected;
   const writeOk = !!hw?.write.connected;
@@ -97,22 +96,22 @@ export function HardwarePanel() {
 
       <div className="divider" style={{ margin: '12px 0' }} />
 
+      {/*
+        되읽은 맵을 화면에 한 번 더 그리지 않는다. 읽기 보드의 LED 매트릭스가 같은 값을
+        실물로 띄우고 있어서, 화면 격자는 그걸 복제할 뿐이었다. 대신 눈으로 셀 수 없는 것
+        — 불량 칸 수, 프레임 수, 보낸 맵과 어긋난 칸 수 — 만 여기 남긴다.
+        판정 버튼은 '패턴 선택' 카드로 옮겼다 (pages/Inspect.tsx).
+      */}
       <div className="card-sub" style={{ marginBottom: 6 }}>
         읽기 아두이노가 되읽은 맵 — <strong>판정에 들어가는 건 이 맵이다</strong>
       </div>
       {hwMap ? (
         <>
-          <WaferGrid map={hwMap} />
-          <div className="row" style={{ marginTop: 8, gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* onClick={runInspection} 로 넘기면 클릭 이벤트가 source 인자로 들어가 'draw' 로 샌다 */}
-            <button className="btn btn-sm btn-primary" onClick={() => runInspection('hardware')} disabled={running}>
-              {running ? '판정 중…' : '이 맵으로 판정하기'}
-            </button>
-            <span className="section-note" style={{ color: 'var(--text-muted)' }}>
-              불량 {readDefects}칸 · 프레임 {hw?.read.frames ?? 0}개
-              {state.hwAt ? ` · ${new Date(state.hwAt).toLocaleTimeString('ko-KR')}` : ''}
-            </span>
-          </div>
+          <p className="section-note" style={{ color: 'var(--text-muted)' }}>
+            불량 {readDefects}칸 · 프레임 {hw?.read.frames ?? 0}개
+            {state.hwAt ? ` · ${new Date(state.hwAt).toLocaleTimeString('ko-KR')}` : ''} · 맵 자체는 읽기 보드의 LED
+            매트릭스에 그대로 떠 있다.
+          </p>
 
           {mismatch !== null && (
             <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
@@ -139,26 +138,10 @@ export function HardwarePanel() {
       )}
 
       <p className="section-note" style={{ marginTop: 10, color: 'var(--text-muted)' }}>
-        판정은 <strong>실제로 스캔된 이 맵으로</strong> 한다. 되읽는 과정에서 비트가 새면 판정도 같이 달라져야 하고,
+        판정은 <strong>실제로 스캔된 맵으로</strong> 한다. 되읽는 과정에서 비트가 새면 판정도 같이 달라져야 하고,
         그게 이 경로를 거치는 이유다. 화면에서 그린 맵으로 <strong>자동으로 대체되는 일은 없다.</strong>
       </p>
 
-      {/*
-        하드웨어가 없을 때의 우회로.
-        이게 없으면 배선이 끊긴 동안 화면이 통째로 막힌다 — 판정 버튼이 아예 안 뜬다.
-        조용한 대체가 아니라 사용자가 직접 누르는 버튼이고, 기록에도 'draw' 로 남는다.
-      */}
-      {!hwMap && (
-        <div style={{ marginTop: 10 }}>
-          <button className="btn btn-sm" onClick={() => runInspection('draw')} disabled={running}>
-            {running ? '판정 중…' : '하드웨어 없이 화면 맵으로 판정'}
-          </button>
-          <p className="section-note" style={{ marginTop: 6, color: 'var(--text-muted)' }}>
-            위쪽 <strong>패턴 선택</strong>에 그린 맵을 그대로 모델에 넣는다. 하드웨어를 거치지 않았으므로 되읽기
-            검증이 빠진 판정이고, 이력에 그렇게 남는다.
-          </p>
-        </div>
-      )}
     </Card>
   );
 }
