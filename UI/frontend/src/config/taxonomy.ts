@@ -37,8 +37,8 @@ export interface Family {
 export const FAMILIES: Record<FamilyId, Family> = {
   NORMAL: {
     id: 'NORMAL',
-    label: '정상',
-    short: '정상',
+    label: 'Normal',
+    short: 'Normal',
     discriminator: '결함률이 배경 수준 이하',
     meaning: '이 해상도에서 잡히는 계통 패턴이 없음. 결함이 없다는 뜻은 아니다.',
     urgency: 'none',
@@ -46,8 +46,8 @@ export const FAMILIES: Record<FamilyId, Family> = {
   },
   RADIAL_INNER: {
     id: 'RADIAL_INNER',
-    label: '반경 구조 · 중심 편중',
-    short: '중심계',
+    label: 'Radial · Center-weighted',
+    short: 'Inner',
     discriminator: '결함 무게중심 반경이 안쪽으로 치우침',
     meaning: '회전 대칭 공정(연마·도포·가스 분배)의 중앙 조건 이탈.',
     urgency: 'investigate',
@@ -55,8 +55,8 @@ export const FAMILIES: Record<FamilyId, Family> = {
   },
   RADIAL_OUTER: {
     id: 'RADIAL_OUTER',
-    label: '반경 구조 · 외곽 편중',
-    short: '외곽계',
+    label: 'Radial · Edge-weighted',
+    short: 'Edge',
     discriminator: '결함 무게중심 반경이 바깥으로 치우침',
     meaning: '에지 소모품·척 접촉·에지 처리 레시피 쪽 신호.',
     urgency: 'investigate',
@@ -64,8 +64,8 @@ export const FAMILIES: Record<FamilyId, Family> = {
   },
   LOCAL: {
     id: 'LOCAL',
-    label: '국부 집중',
-    short: '국부계',
+    label: 'Localized',
+    short: 'Local',
     discriminator: '단일 연결 군집이 전체 결함의 대부분을 차지',
     meaning: '특정 챔버·특정 샷·고정 접촉점처럼 위치가 고정된 원인.',
     urgency: 'investigate',
@@ -73,8 +73,8 @@ export const FAMILIES: Record<FamilyId, Family> = {
   },
   SCATTER: {
     id: 'SCATTER',
-    label: '산발',
-    short: '산발계',
+    label: 'Scattered',
+    short: 'Scatter',
     discriminator: '결함은 있으나 반경 편중·군집 모두 약함',
     meaning: '특정 장비보다 환경·케미컬·파티클 쪽 유래 가능성이 높다.',
     urgency: 'watch',
@@ -82,8 +82,8 @@ export const FAMILIES: Record<FamilyId, Family> = {
   },
   GLOBAL: {
     id: 'GLOBAL',
-    label: '전면 이상',
-    short: '전면계',
+    label: 'Global',
+    short: 'Global',
     discriminator: '결함률이 임계 이상 — 공간 구조와 무관하게 우선',
     meaning: '공정 대형 이탈 또는 계측계 자체 고장. 원인 추적보다 확산 차단이 먼저.',
     urgency: 'immediate',
