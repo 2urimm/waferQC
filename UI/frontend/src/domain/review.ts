@@ -33,8 +33,17 @@ export function decideReview(
 
   if (ALWAYS_REVIEW_CLASSES.includes(top)) reasons.push('below_class_threshold');
 
+  /*
+    고밀도 안전망은 **'None'/'Random' 판정일 때만** 건다 — 서버(wafer_model.py의
+    predict_final_wafer)와 같은 조건이다. 클래스 조건 없이 칸수만 보면 Near-full처럼
+    "많이 불량인 게 판정 내용 그 자체"인 결과에도 "정상 판정인데 불량 밀도가 높음"이
+    붙어서, 사유가 판정을 설명하지 않게 된다. 이 사유가 잡으려는 건 정반대 상황이다:
+    구조를 못 찾아 정상/산발이라 해 놓고 실제로는 칸이 많이 죽어 있는 경우.
+  */
   const defectCells = map.filter((c) => c === CELL_DEFECT).length;
-  if (defectCells >= HIGH_DEFECT_CELL_THRESHOLD) reasons.push('extreme_defect_density');
+  if (defectCells >= HIGH_DEFECT_CELL_THRESHOLD && (top === 'None' || top === 'Random')) {
+    reasons.push('extreme_defect_density');
+  }
 
   // 정상이라 했는데 불량 근거가 남아 있는 경우 — 놓친 결함 쪽이 위험이 크다
   if (top === 'None') {

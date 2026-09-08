@@ -105,11 +105,18 @@ export const ALWAYS_REVIEW_CLASSES: DefectPatternId[] = ['Random', 'Near-full'];
  */
 export const HIGH_DEFECT_CELL_THRESHOLD = 10;
 
-/** 'None' 판정인데 결함 근거가 있을 때의 검토 임계. 노트북 BALANCED_NONE_REVIEW_THRESHOLD. */
-export const NONE_REVIEW_THRESHOLD = 0.5;
+/**
+ * 'None' 판정인데 결함 근거가 있을 때의 검토 임계.
+ * config.json 의 balanced_none_review_threshold(노트북 BALANCED_NONE_REVIEW_THRESHOLD)와 같은 값.
+ */
+export const NONE_REVIEW_THRESHOLD = 0.49;
 
-/** V3 보조 모델의 이진(정상/불량) 임계 */
-export const V3_BINARY_THRESHOLD = 0.5;
+/**
+ * V3 보조 모델의 이진(정상/불량) 임계. config.json 의 v3_binary_threshold_fallback.
+ * 화면은 보조 모델 출력을 더 이상 표시하지 않지만(주 모델 하나만 쓴다), 서버는 여전히
+ * 이 값으로 V3 를 대조해 review_reason 을 만든다 — 정책 대조용으로 남겨 둔다.
+ */
+export const V3_BINARY_THRESHOLD = 0.68;
 
 /**
  * 노트북이 내보내는 review_reasons 코드와 그 뜻.
