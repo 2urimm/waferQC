@@ -108,27 +108,40 @@ POST {baseUrl}/predict
 요청  { "hardware_map": number[8][8] }        // 0 / 1 / 2
 ```
 
-응답 (`services/inference.ts`의 `PredictResponse`):
+응답 (`services/inference.ts`의 `PredictResponse`). **필드명은 `wafer_model.py`의
+`WaferInferenceSystem.predict()` 반환값 그대로다** — `serve.py`는 감싸기만 하고 이름을 바꾸지 않는다.
 
 ```jsonc
 {
+  "prediction": "Edge-Loc",              // 최종 1순위 — UI 는 이걸 그대로 쓴다
+  "score": 0.31,
+  "status": "REVIEW",                    // ACCEPT | REVIEW
+  "review_reason": ["low_primary_score"],// 배열. 이름이 단수형인 것에 주의
+  "class_threshold": 1.01,
+  "none_review_threshold": 0.49,
+  "top_predictions": [{ "class": "Edge-Loc", "score": 0.31 }],
+  "auxiliary_prediction": "Edge-Loc",    // V3. UI 는 표시하지 않는다 (§2 참고)
+  "auxiliary_score": 0.74,
+  "v3_defect_score": 0.88,
+  "v3_binary_threshold": 0.68,
+  "defect_cell_count": 8,
+  "direction": "9시",                    // Scratch · Loc · Edge-Loc 에만
+  "direction_confidence": 0.62,
+  "direction_method": "max_vs_other_mean",
+  "quadrant_counts": { "top_left": 5, "top_right": 1, "bottom_left": 2, "bottom_right": 0 },
+
+  // serve.py 가 덧붙이는 것
   "probabilities": [0.02, 0.01, 0.31, 0.03, 0.30, 0.03, 0.25, 0.03, 0.02],
-  "final_prediction": "Edge-Loc",
-  "final_score": 0.31,
-  "primary_model": "WaferCNNV2",
-  "v2_top_predictions": [{ "class": "Edge-Loc", "score": 0.31 }],
-  "auxiliary_used": true,
-  "v3_binary_defect_score": 0.88,
-  "v3_auxiliary_prediction": "Edge-Loc",
-  "v3_auxiliary_score": 0.74,
-  "needs_review": true,
-  "review_reasons": ["low_primary_score"],
-  "defect_cell_count": 8
+  "class_names": ["Center", "Donut", "..."],
+  "model": "WaferCNNV2"
 }
 ```
 
-`probabilities`는 **9개 전부** 내려주는 게 좋다. `v2_top_predictions`만 오면 나머지 클래스가 0으로
+`probabilities`는 **9개 전부** 내려주는 게 좋다. `top_predictions`만 오면 나머지 클래스가 0으로
 채워져 계통 합이 실제보다 낮게 나온다.
+
+UI 가 서버 값을 그대로 쓰는 것: `prediction` · `score` · `status` · `review_reason` ·
+`class_threshold` · 방향 관련 4개 · `defect_cell_count`. 다시 계산하지 않는다.
 
 ---
 

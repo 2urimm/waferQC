@@ -26,7 +26,7 @@ export function HardwarePanel() {
 
   return (
     <Card
-      title="아두이노 연결"
+      title="하드웨어 연결"
       sub="화면에 찍은 불량이 쓰기 아두이노로 나가고, 읽기 아두이노가 그 보드를 스캔해 되돌려 준다."
       actions={
         <>
