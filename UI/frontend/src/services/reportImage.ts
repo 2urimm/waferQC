@@ -1,5 +1,11 @@
 import { GRID_COLS, GRID_ROWS } from '../config/hardware';
-import { CELL_DEFECT, CELL_NORMAL, CELL_OUTSIDE, REVIEW_REASON_COPY } from '../config/model';
+import {
+  CELL_DEFECT,
+  CELL_NORMAL,
+  CELL_OUTSIDE,
+  REVIEW_REASON_COPY,
+  SHOW_REVIEW_STATUS,
+} from '../config/model';
 import { CONFIDENCE_COPY, FAMILIES, confidenceBand } from '../config/taxonomy';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { DiagnosisPlan } from '../domain/plan';
@@ -230,14 +236,16 @@ function draw({ inspection, plan, processLimit = 3 }: ReportImageOptions, canvas
   ry += 26;
   let bx = rx;
   bx = badge(g, `신뢰도 ${CONFIDENCE_COPY[band].label}`, bx, ry, C.deemph);
-  badge(
-    g,
-    verdict.review.required ? '검토 필요' : '자동 채택 가능',
-    bx,
-    ry,
-    verdict.review.required ? C.warning : C.good,
-    true,
-  );
+  if (SHOW_REVIEW_STATUS) {
+    badge(
+      g,
+      verdict.review.required ? '검토 필요' : '자동 채택 가능',
+      bx,
+      ry,
+      verdict.review.required ? C.warning : C.good,
+      true,
+    );
+  }
 
   ry += 26;
   g.font = font(13);
@@ -258,7 +266,7 @@ function draw({ inspection, plan, processLimit = 3 }: ReportImageOptions, canvas
   /* ── 검토 필요 ──
      배경을 먼저 칠해야 하므로 높이를 미리 재고 나서 그린다. 텍스트를 먼저 그리면
      배경이 덮어버린다. */
-  if (verdict.review.required) {
+  if (SHOW_REVIEW_STATUS && verdict.review.required) {
     const innerW = W - PAD * 2 - 32;
     const head = '사람 검토 필요 — 모델 정책이 자동 채택 대상에서 제외했다';
 

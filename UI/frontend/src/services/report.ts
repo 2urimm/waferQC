@@ -1,4 +1,4 @@
-import { REVIEW_REASON_COPY } from '../config/model';
+import { REVIEW_REASON_COPY, SHOW_REVIEW_STATUS } from '../config/model';
 import { CONFIDENCE_COPY, FAMILIES, confidenceBand, unresolvedPairsFor } from '../config/taxonomy';
 import { CASE_STATUS_LABEL, explainStatus } from '../domain/caseStatus';
 import { PATTERN_LABEL } from '../domain/causes';
@@ -54,7 +54,7 @@ export function generateReport({ inspection, plan, processLimit = 4 }: ReportOpt
   L.push('');
 
   /* ── 검토 필요 여부 (판정보다 먼저) ── */
-  if (verdict.review.required) {
+  if (SHOW_REVIEW_STATUS && verdict.review.required) {
     L.push(`> ## ⚠ 사람 검토 필요`);
     L.push(`>`);
     L.push(`> 모델 정책이 이 판정을 자동 채택 대상에서 제외했다. 아래 공정 순서는 참고용이며,`);
@@ -73,7 +73,7 @@ export function generateReport({ inspection, plan, processLimit = 4 }: ReportOpt
   L.push('');
   L.push(
     `모델 1순위 클래스: ${PATTERN_LABEL[verdict.top]} ${pct(verdict.topScore)}` +
-      (verdict.review.required ? ' · **검토 필요**' : ' · 자동 채택 가능'),
+      (SHOW_REVIEW_STATUS ? (verdict.review.required ? ' · **검토 필요**' : ' · 자동 채택 가능') : ''),
   );
   L.push('');
   L.push(`- 판별 근거: ${family.discriminator}`);

@@ -86,6 +86,20 @@ export const PATTERN_FAMILY: Record<DefectPatternId, FamilyId> = {
 
 /* ── 검토(review) 정책 ───────────────────────────────────────────────────── */
 
+/**
+ * 검토 상태를 화면·보고서에 표시할지.
+ *
+ * 정책 자체는 계속 돈다 — 서버가 review_reason 을 내려주고 verdict.review 도 그대로
+ * 채워진다. 이 스위치는 **표시만** 끈다. 지금 임계 설정에서는 9클래스 중 6개가 1.01 이라
+ * 거의 모든 판정에 '검토 필요'가 붙는데, 그 값들은 모델 담당자가 실측 임계를 넣기 전의
+ * 자리표시자다. 자리표시자 때문에 붙는 경고를 화면 가득 띄우면, 정작 판정이 무엇을
+ * 말하는지가 안 읽힌다.
+ *
+ * 실제 운영에서는 true 로 되돌린다 — 실측 임계가 들어오면 이 경고가 의미를 갖는다.
+ * 여기 한 줄만 바꾸면 판정 화면 · 보고서 마크다운 · 보고서 PNG 가 같이 따라온다.
+ */
+export const SHOW_REVIEW_STATUS = false;
+
 /** 1순위 확률이 이 값 미만이면 사람 검토. 노트북 predict_final_wafer의 low_score_threshold. */
 export const LOW_PRIMARY_SCORE = 0.6;
 

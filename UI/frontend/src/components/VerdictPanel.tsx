@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { REVIEW_REASON_COPY } from '../config/model';
+import { REVIEW_REASON_COPY, SHOW_REVIEW_STATUS } from '../config/model';
 import { CONFIDENCE_COPY, FAMILIES, confidenceBand } from '../config/taxonomy';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { Verdict } from '../domain/types';
@@ -72,7 +72,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         클래스 이름보다 먼저 답해야 할 질문이기 때문이다. 검토가 필요한 판정을 확정처럼
         띄우면 엔지니어를 근거 없이 챔버 앞으로 보내게 된다.
       */}
-      {verdict.review.required && (
+      {SHOW_REVIEW_STATUS && verdict.review.required && (
         <div className="banner warn" role="alert">
           <span className="caveat-icon" aria-hidden>!</span>
           <div style={{ width: '100%' }}>
@@ -124,16 +124,17 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
             {URGENCY_LABEL[family.urgency]}
           </Badge>
           <Badge>신뢰도 {CONFIDENCE_COPY[band].label}</Badge>
-          {verdict.review.required ? (
-            <Badge color="--warning" strong>검토 필요</Badge>
-          ) : (
-            <Badge color="--good">자동 채택 가능</Badge>
-          )}
+          {SHOW_REVIEW_STATUS &&
+            (verdict.review.required ? (
+              <Badge color="--warning" strong>검토 필요</Badge>
+            ) : (
+              <Badge color="--good">자동 채택 가능</Badge>
+            ))}
         </div>
 
         <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
           모델 1순위: {PATTERN_LABEL[verdict.top]} {pct(verdict.topScore)}
-          {verdict.review.note && ` · ${verdict.review.note}`}
+          {SHOW_REVIEW_STATUS && verdict.review.note && ` · ${verdict.review.note}`}
         </p>
 
         <p className="section-note" style={{ marginTop: 8 }}>
@@ -184,9 +185,11 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
           sub="실제 WaferCNNV2가 낸 값. UI가 다시 계산하지 않고 그대로 표시한다."
         >
           <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-            <Badge color={verdict.model.status === 'ACCEPT' ? '--good' : '--warning'} strong>
-              {verdict.model.status}
-            </Badge>
+            {SHOW_REVIEW_STATUS && (
+              <Badge color={verdict.model.status === 'ACCEPT' ? '--good' : '--warning'} strong>
+                {verdict.model.status}
+              </Badge>
+            )}
             <Badge>불량 {verdict.model.defectCellCount}칸</Badge>
             {verdict.model.direction && (
               <Badge strong>
@@ -213,7 +216,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
             <dt>클래스 임계</dt>
             <dd>
               {verdict.model.classThreshold.toFixed(2)}
-              {verdict.model.classThreshold > 1 && (
+              {SHOW_REVIEW_STATUS && verdict.model.classThreshold > 1 && (
                 <span style={{ color: 'var(--text-muted)' }}>
                   {' '}
                   — 1을 넘는 값이라 이 클래스는 확률과 무관하게 항상 검토로 분류된다
