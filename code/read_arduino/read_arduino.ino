@@ -34,7 +34,7 @@
 
 #define LED_PIN 9    // NeoPixel DIN
 #define NUM_LEDS 64
-#define BRIGHTNESS 40  // 64칸 전부 흰색이어도 전원이 감당하는 값
+#define BRIGHTNESS 10  // 64칸 전부 흰색이어도 전원이 감당하는 값
 
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
