@@ -3,7 +3,7 @@ chcp 949 >nul
 title waferQC 실행기
 
 rem ---------------------------------------------------------------------
-rem  waferQC 실행기 - 더블클릭하면 창 두 개가 뜬다.
+rem  waferQC 실행기 - 더블클릭하면 창 세 개가 뜬다.
 rem
 rem    1) 판정 모델 서버 (backend\wafer_final_package_v2\serve.py)  :8077
 rem    2) 화면 개발 서버 (frontend, Vite)                        :5180

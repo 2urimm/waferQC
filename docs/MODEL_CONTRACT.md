@@ -50,7 +50,7 @@ UI와 모델이 맞춰야 하는 것들. 출처는 `ConvNeXt_CNN.ipynb`가 내�
 | 모델 | 역할 |
 | --- | --- |
 | `WaferCNNV2` (primary) | 9클래스 최종 예측 |
-| `WaferHierarchicalCNNV3` (auxiliary) | 검토 판단 보조, 이진(정상/불량) 임계 보유 |
+| `WaferHierarchicalCNNV3` (auxiliary) | 검토 판단 보조, 이진(정상/불량) 임계 보유. **화면에는 표시하지 않는다** — 판정은 주 모델 하나로 읽고, 두 모델이 갈린 사실은 검토 사유에만 남는다 |
 
 ### 계통 매핑
 
@@ -59,12 +59,14 @@ UI는 9클래스를 6계통으로 묶어 헤드라인을 만든다. 각 클래�
 
 | 계통 | 클래스 |
 | --- | --- |
-| NORMAL 정상 | None |
-| RADIAL_INNER 중심계 | Center, Donut |
-| RADIAL_OUTER 외곽계 | Edge-Ring, Edge-Loc |
-| LOCAL 국부계 | Loc, Scratch |
-| SCATTER 산발계 | Random |
-| GLOBAL 전면계 | Near-full |
+| NORMAL — Normal | None |
+| RADIAL_INNER — Radial · Center-weighted (`Inner`) | Center, Donut |
+| RADIAL_OUTER — Radial · Edge-weighted (`Edge`) | Edge-Ring, Edge-Loc |
+| LOCAL — Localized (`Local`) | Loc, Scratch |
+| SCATTER — Scattered (`Scatter`) | Random |
+| GLOBAL — Global (`Global`) | Near-full |
+
+화면·보고서에 뜨는 이름이 이 영문 라벨이다. 괄호 안은 배지·목록에 쓰는 짧은 이름.
 
 ---
 
@@ -76,9 +78,15 @@ UI는 9클래스를 6계통으로 묶어 헤드라인을 만든다. 각 클래�
 | --- | --- | --- |
 | `LOW_PRIMARY_SCORE` | 0.60 | 1순위 확률이 이 아래면 검토 |
 | `ALWAYS_REVIEW_CLASSES` | `Random`, `Near-full` | 확률과 무관하게 항상 검토 |
-| `HIGH_DEFECT_CELL_THRESHOLD` | 50 | 불량 칸이 이 개수 이상이면 검토 |
-| `NONE_REVIEW_THRESHOLD` | 0.5 | 정상 판정인데 불량 근거가 이만큼 있으면 검토 |
-| `V3_BINARY_THRESHOLD` | 0.5 | 보조 모델 이진 임계 |
+| `HIGH_DEFECT_CELL_THRESHOLD` | 10 | 불량 칸이 이 개수 이상이고 판정이 `None`/`Random` 이면 검토. 기준은 64칸이 아니라 웨이퍼 안 52칸 |
+| `NONE_REVIEW_THRESHOLD` | 0.49 | 정상 판정인데 불량 근거가 이만큼 있으면 검토 |
+| `V3_BINARY_THRESHOLD` | 0.68 | 보조 모델 이진 임계 (서버 대조용 · 화면 미표시) |
+
+`classwise_score_thresholds`는 지금 9개 중 6개(Center · Donut · Edge-Loc · Random · Scratch ·
+Near-full)가 `1.01`이다. 확률이 넘을 수 없는 값이라 그 클래스는 늘 검토로 분류된다 —
+모델 담당자가 실측값을 넣기 전까지의 자리표시자다.
+
+값은 모두 모델 패키지의 `config.json`이 정본이고, `config/model.ts`가 그걸 따라간다.
 
 노트북이 내보내는 `review_reasons` 코드 11종은 `REVIEW_REASON_COPY`에 한국어 설명과 조치까지
 같이 적어 두었다. 코드만 화면에 띄우면 엔지니어가 읽을 수 없다.
