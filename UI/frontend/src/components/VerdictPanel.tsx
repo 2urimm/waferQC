@@ -58,7 +58,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
     사유를 지우는 게 아니라 무게를 줄이는 것이다. 사유 이름은 항상 보이고, 왜 그런지는
     누르면 나온다. 지금 임계 설정상 9클래스 중 6개가 확률로 넘을 수 없는 값(1.01)이라
     'below_class_threshold' 가 사실상 모든 불량 판정에 붙는데, 그 긴 설명이 매번 펼쳐져
-    있으면 정작 드물게 뜨는 진짜 사유(주·보조 모델 불일치 등)가 같은 크기로 묻힌다.
+    있으면 정작 드물게 뜨는 진짜 사유('판정이 갈림' 등)가 같은 크기로 묻힌다.
   */
   const [reviewOpen, setReviewOpen] = useState(false);
 

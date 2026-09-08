@@ -121,6 +121,11 @@ export const V3_BINARY_THRESHOLD = 0.68;
 /**
  * 노트북이 내보내는 review_reasons 코드와 그 뜻.
  * 코드만 화면에 띄우면 엔지니어가 읽을 수 없으므로 조치까지 같이 적었다.
+ *
+ * ⚠ 코드 이름(v2_/v3_)은 서버가 내려주는 그대로다 — 바꾸면 매칭이 깨진다.
+ *   화면 문구에서는 주·보조 모델을 구분해 말하지 않는다. 판정은 주 모델 하나로 읽기로
+ *   했고(보조 모델 출력은 화면에서 뺐다), 엔지니어가 할 일은 어느 모델이 뭐라 했는지가
+ *   아니라 "이 판정을 그대로 믿어도 되는가"다. 그래서 사유는 그 결론만 말한다.
  */
 export type ReviewReason =
   | 'low_primary_score'
@@ -138,7 +143,7 @@ export type ReviewReason =
 export const REVIEW_REASON_COPY: Record<ReviewReason, { label: string; detail: string }> = {
   low_primary_score: {
     label: '1순위 확률 부족',
-    detail: `주 모델의 최고 확률이 ${LOW_PRIMARY_SCORE * 100}% 미만이다. 어느 클래스도 확신하지 못한 상태이므로 판정을 그대로 쓰면 안 된다.`,
+    detail: `최고 확률이 ${LOW_PRIMARY_SCORE * 100}% 미만이다. 어느 클래스도 확신하지 못한 상태이므로 판정을 그대로 쓰면 안 된다.`,
   },
   below_class_threshold: {
     label: '클래스별 임계 미달',
@@ -150,27 +155,27 @@ export const REVIEW_REASON_COPY: Record<ReviewReason, { label: string; detail: s
   },
   none_defect_disagreement: {
     label: '정상/불량 판단 불일치',
-    detail: '정상 여부에 대해 모델 내부 판단이 갈렸다.',
+    detail: '정상 여부에 대해 판단이 갈렸다.',
   },
   v2_none_but_v3_defect: {
-    label: '주 모델 정상 · 보조 모델 불량',
-    detail: '주 모델은 정상이라 했지만 보조 모델은 불량이라 본다. 놓친 결함 쪽이 위험이 크므로 사람이 봐야 한다.',
+    label: '정상 판정에 반대 근거',
+    detail: '정상으로 판정했지만 반대되는 불량 근거가 같이 잡혔다. 놓친 결함 쪽이 위험이 크므로 사람이 봐야 한다.',
   },
   v2_defect_but_v3_none: {
-    label: '주 모델 불량 · 보조 모델 정상',
-    detail: '주 모델은 불량이라 했지만 보조 모델은 정상이라 본다. 오탐일 수 있으니 확인 후 조치할 것.',
+    label: '불량 판정에 반대 근거',
+    detail: '불량으로 판정했지만 반대되는 정상 근거가 같이 잡혔다. 오탐일 수 있으니 확인 후 조치할 것.',
   },
   v2_v3_disagreement: {
-    label: '주·보조 모델 판정 불일치',
-    detail: '두 모델이 다른 클래스를 지목했다. 어느 쪽 원인 공정을 볼지 사람이 정해야 한다.',
+    label: '판정이 갈림',
+    detail: '같은 웨이퍼에 서로 다른 클래스가 지목됐다. 어느 쪽 원인 공정을 볼지 사람이 정해야 한다.',
   },
   defect_class_disagreement: {
     label: '불량 클래스 불일치',
-    detail: '불량이라는 데는 두 모델이 동의하지만 어떤 불량인지가 갈렸다. 공정 후보를 좁히려면 확인이 필요하다.',
+    detail: '불량이라는 데는 이견이 없지만 어떤 불량인지가 갈렸다. 공정 후보를 좁히려면 확인이 필요하다.',
   },
   v3_low_defect_score: {
-    label: '보조 모델 불량 점수 낮음',
-    detail: '보조 모델의 불량 확신도가 임계 아래다.',
+    label: '불량 확신도 낮음',
+    detail: '불량이라는 확신도가 정책 임계 아래다.',
   },
   structurally_ambiguous_class: {
     label: '구조적으로 모호한 클래스',
