@@ -169,6 +169,8 @@ export function Inspect() {
                   ) : (
                     <>
                       지금 보낸 맵과 <strong>{mismatch}칸</strong>이 다르다. 그 차이까지 그대로 판정에 들어간다.
+                      전부 다르게 나오면 읽기 쪽 HIGH/LOW가 뒤집힌 것이니 브리지를{' '}
+                      <code className="mono">--invert-read</code> 로 띄워 볼 것.
                     </>
                   )}
                 </p>
