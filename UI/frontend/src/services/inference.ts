@@ -153,10 +153,10 @@ export async function probeModelServer(baseUrl: string): Promise<{ ok: boolean; 
   try {
     const res = await fetch(`${baseUrl}/health`);
     if (!res.ok) return { ok: false, detail: `HTTP ${res.status}` };
-    const j = (await res.json()) as { device?: string; model?: string; v3_binary_threshold?: number };
+    const j = (await res.json()) as { device?: string; model?: string };
     return {
       ok: true,
-      detail: `${j.model ?? '모델'} · device=${j.device ?? '?'} · V3 임계 ${j.v3_binary_threshold ?? '?'}`,
+      detail: `${j.model ?? '모델'} · device=${j.device ?? '?'}`,
     };
   } catch (e) {
     return { ok: false, detail: e instanceof Error ? e.message : String(e) };

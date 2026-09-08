@@ -52,6 +52,16 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
   */
   const [driversOpen, setDriversOpen] = useState(false);
 
+  /*
+    검토 사유의 '설명'은 접어 둔다.
+
+    사유를 지우는 게 아니라 무게를 줄이는 것이다. 사유 이름은 항상 보이고, 왜 그런지는
+    누르면 나온다. 지금 임계 설정상 9클래스 중 6개가 확률로 넘을 수 없는 값(1.01)이라
+    'below_class_threshold' 가 사실상 모든 불량 판정에 붙는데, 그 긴 설명이 매번 펼쳐져
+    있으면 정작 드물게 뜨는 진짜 사유(주·보조 모델 불일치 등)가 같은 크기로 묻힌다.
+  */
+  const [reviewOpen, setReviewOpen] = useState(false);
+
   const shownFamilies = verdict.familyScores.filter((s, i) => i === 0 || s.probability >= FAMILY_FLOOR_PCT / 100);
   const hiddenFamilies = verdict.familyScores.length - shownFamilies.length;
 
@@ -65,19 +75,40 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
       {verdict.review.required && (
         <div className="banner warn" role="alert">
           <span className="caveat-icon" aria-hidden>!</span>
-          <div>
-            <strong>사람 검토 필요</strong> — 모델 정책이 이 판정을 자동 채택 대상에서 제외했다.
-            <div className="stack" style={{ gap: 6, marginTop: 8 }}>
-              {verdict.review.reasons.map((r) => (
-                <div key={r}>
-                  <strong style={{ fontWeight: 600 }}>{REVIEW_REASON_COPY[r].label}</strong>
-                  <span style={{ color: 'var(--text-muted)' }}> — {REVIEW_REASON_COPY[r].detail}</span>
+          <div style={{ width: '100%' }}>
+            <div className="row" style={{ gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+              <span>
+                <strong>사람 검토 필요</strong>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {' — '}
+                  {verdict.review.reasons.map((r) => REVIEW_REASON_COPY[r].label).join(' · ')}
+                </span>
+              </span>
+              <button
+                className="btn btn-sm"
+                onClick={() => setReviewOpen((v) => !v)}
+                aria-expanded={reviewOpen}
+              >
+                {reviewOpen ? '접기' : '왜?'}
+              </button>
+            </div>
+
+            {reviewOpen && (
+              <div className="stack" style={{ gap: 6, marginTop: 10 }}>
+                <div style={{ color: 'var(--text-muted)' }}>
+                  모델 정책이 이 판정을 자동 채택 대상에서 제외했다.
                 </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>
-              아래 공정 순서는 참고용으로 남겨 둔다. 설비를 세우는 조치는 검토를 거친 뒤에 할 것.
-            </div>
+                {verdict.review.reasons.map((r) => (
+                  <div key={r}>
+                    <strong style={{ fontWeight: 600 }}>{REVIEW_REASON_COPY[r].label}</strong>
+                    <span style={{ color: 'var(--text-muted)' }}> — {REVIEW_REASON_COPY[r].detail}</span>
+                  </div>
+                ))}
+                <div style={{ color: 'var(--text-muted)' }}>
+                  아래 공정 순서는 참고용으로 남겨 둔다. 설비를 세우는 조치는 검토를 거친 뒤에 할 것.
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -130,16 +161,27 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
           </p>
         )}
 
-        <div className="banner info" style={{ marginTop: 12 }}>
-          <span className="caveat-icon" aria-hidden>i</span>
-          <div>{CONFIDENCE_COPY[band].note}</div>
-        </div>
+        {/*
+          신뢰도 문구는 경고가 아니라 진행 안내다("아래 공정 순서대로 진행하면 된다").
+          그걸 매번 박스에 넣으면 잘 나온 판정까지 주의 문구가 붙은 것처럼 보인다.
+          단정하지 말라고 말해야 하는 '낮음'일 때만 박스로 세우고, 나머지는 한 줄로 둔다.
+        */}
+        {band === 'low' ? (
+          <div className="banner warn" style={{ marginTop: 12 }}>
+            <span className="caveat-icon" aria-hidden>!</span>
+            <div>{CONFIDENCE_COPY[band].note}</div>
+          </div>
+        ) : (
+          <p className="section-note" style={{ marginTop: 12, color: 'var(--text-muted)' }}>
+            {CONFIDENCE_COPY[band].note}
+          </p>
+        )}
       </Card>
 
       {verdict.model && (
         <Card
           title="모델 출력"
-          sub="실제 WaferCNNV2 + V3가 낸 값. UI가 다시 계산하지 않고 그대로 표시한다."
+          sub="실제 WaferCNNV2가 낸 값. UI가 다시 계산하지 않고 그대로 표시한다."
         >
           <div className="row" style={{ gap: 8, marginBottom: 10 }}>
             <Badge color={verdict.model.status === 'ACCEPT' ? '--good' : '--warning'} strong>
@@ -162,37 +204,28 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
           </div>
 
           <dl className="kv">
+            {/*
+              임계가 1을 넘는 건 이 판정이 위험하다는 뜻이 아니라 그 클래스가 설정상
+              늘 검토로 분류된다는 뜻이다. 판정별 위험 신호처럼 붉게 세우면 안 된다 —
+              확률 0.99 든 0.31 이든 똑같이 뜨는 문구라 판정에 대해 알려 주는 게 없다.
+              사실은 남기되 색은 뺀다. (모델 담당자가 실제 값을 넣으면 이 문구는 사라진다.)
+            */}
             <dt>클래스 임계</dt>
             <dd>
               {verdict.model.classThreshold.toFixed(2)}
               {verdict.model.classThreshold > 1 && (
-                <span style={{ color: 'var(--serious)' }}>
+                <span style={{ color: 'var(--text-muted)' }}>
                   {' '}
-                  — 확률이 넘을 수 없는 값이라 이 클래스는 항상 검토 대상이다
+                  — 1을 넘는 값이라 이 클래스는 확률과 무관하게 항상 검토로 분류된다
                 </span>
               )}
             </dd>
-            {verdict.model.auxiliaryPrediction && (
-              <>
-                <dt>보조 모델 V3</dt>
-                <dd>
-                  {PATTERN_LABEL[verdict.model.auxiliaryPrediction]}
-                  {verdict.model.auxiliaryScore !== null && ` ${pct(verdict.model.auxiliaryScore)}`}
-                  {verdict.model.auxiliaryPrediction !== verdict.top && (
-                    <span style={{ color: 'var(--serious)' }}> — 주 모델과 다름</span>
-                  )}
-                </dd>
-              </>
-            )}
-            {verdict.model.v3DefectScore !== null && (
-              <>
-                <dt>V3 불량 점수</dt>
-                <dd>
-                  {verdict.model.v3DefectScore.toFixed(3)}
-                  {verdict.model.v3BinaryThreshold !== null && ` / 임계 ${verdict.model.v3BinaryThreshold.toFixed(2)}`}
-                </dd>
-              </>
-            )}
+            {/*
+              보조 모델(V3) 출력은 화면에 싣지 않는다 — 판정은 주 모델 하나로 읽는다.
+              서버는 여전히 V3 를 돌려 review_reason 을 만들므로, 두 모델이 갈린 사실은
+              위쪽 '사람 검토 필요' 사유에 그대로 남는다. 응답 필드도 파싱은 계속한다
+              (services/inference.ts) — 다시 띄울 때 계약을 되살릴 필요가 없게.
+            */}
           </dl>
 
           {verdict.model.quadrantCounts && (
