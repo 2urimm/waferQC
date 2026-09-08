@@ -115,7 +115,13 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
 
       <Card
         title="판정"
-        sub={`${verdict.engineVersion}${verdict.engine === 'rule-mock' ? ' · 규칙 기반 대체 (학습 모델 미연결)' : ''} · 추론 ${verdict.inferMs.toFixed(1)} ms`}
+        /*
+          모델 이름은 빼고 추론 시간만 둔다. 어느 모델이 돌았는지는 위쪽 '판정 엔진' 카드와
+          헤드바 배지가 이미 말하고 있고, 판정 카드에서 답해야 할 건 "이 웨이퍼가 무엇인가"다.
+          규칙 대체판일 때만은 남긴다 — 학습된 모델의 결과가 아니라는 사실은 판정을 읽는
+          방식을 바꾸므로 판정 옆에 있어야 한다.
+        */
+        sub={`${verdict.engine === 'rule-mock' ? '규칙 기반 대체 (학습 모델 미연결) · ' : ''}추론 ${verdict.inferMs.toFixed(1)} ms`}
       >
         <div className="verdict-head">
           <span className="verdict-class">{family.label}</span>
@@ -180,10 +186,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
       </Card>
 
       {verdict.model && (
-        <Card
-          title="모델 출력"
-          sub="실제 WaferCNNV2가 낸 값. UI가 다시 계산하지 않고 그대로 표시한다."
-        >
+        <Card title="모델 출력">
           <div className="row" style={{ gap: 8, marginBottom: 10 }}>
             {SHOW_REVIEW_STATUS && (
               <Badge color={verdict.model.status === 'ACCEPT' ? '--good' : '--warning'} strong>
