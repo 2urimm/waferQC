@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { PATTERN_FAMILY, REVIEW_REASON_COPY, SHOW_REVIEW_STATUS } from '../config/model';
-import { FAMILIES } from '../config/taxonomy';
-import { PATTERN_LABEL } from '../domain/causes';
+import { REVIEW_REASON_COPY, SHOW_REVIEW_STATUS } from '../config/model';
+import { PATTERN_LABEL, type DefectPatternId } from '../domain/causes';
 import type { Verdict } from '../domain/types';
 import { Badge, Card } from './ui';
 
@@ -12,6 +11,19 @@ const URGENCY_COLOR: Record<string, string> = {
   watch: '--warning',
   investigate: '--serious',
   immediate: '--critical',
+};
+
+/** 1순위 클래스별 조치 수준 (예전 계통 기준 값을 클래스에 그대로 옮겼다) */
+const CLASS_URGENCY: Record<DefectPatternId, string> = {
+  None: 'none',
+  Center: 'investigate',
+  Donut: 'investigate',
+  'Edge-Ring': 'investigate',
+  'Edge-Loc': 'investigate',
+  Loc: 'investigate',
+  Scratch: 'investigate',
+  Random: 'watch',
+  'Near-full': 'immediate',
 };
 
 const URGENCY_LABEL: Record<string, string> = {
@@ -35,8 +47,7 @@ const DIRECTION_METHOD_LABEL: Record<string, string> = {
 };
 
 export function VerdictPanel({ verdict }: { verdict: Verdict }) {
-  // 조치 수준은 1순위 클래스가 속한 분류의 값을 쓴다 (화면에 계통 이름은 띄우지 않는다)
-  const urgency = FAMILIES[PATTERN_FAMILY[verdict.top]].urgency;
+  const urgency = CLASS_URGENCY[verdict.top];
 
   const [driversOpen, setDriversOpen] = useState(false);
 
