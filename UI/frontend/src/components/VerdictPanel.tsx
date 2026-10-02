@@ -1,15 +1,11 @@
 import { useState } from 'react';
-import { REVIEW_REASON_COPY, SHOW_REVIEW_STATUS } from '../config/model';
-import { CONFIDENCE_COPY, FAMILIES, confidenceBand } from '../config/taxonomy';
+import { PATTERN_FAMILY, REVIEW_REASON_COPY, SHOW_REVIEW_STATUS } from '../config/model';
+import { FAMILIES } from '../config/taxonomy';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { Verdict } from '../domain/types';
-import { ProbabilityBars } from './charts';
 import { Badge, Card } from './ui';
 
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
-
-/** 이 값 미만인 계통은 막대에서 접는다 (1위는 예외로 항상 표시) */
-const FAMILY_FLOOR_PCT = 5;
 
 const URGENCY_COLOR: Record<string, string> = {
   none: '--good',
@@ -39,17 +35,9 @@ const DIRECTION_METHOD_LABEL: Record<string, string> = {
 };
 
 export function VerdictPanel({ verdict }: { verdict: Verdict }) {
-  const family = FAMILIES[verdict.family];
-  const top = verdict.familyScores[0];
-  const second = verdict.familyScores[1];
-  const band = confidenceBand(top.probability, second?.probability ?? 0);
+  // 조치 수준은 1순위 클래스가 속한 분류의 값을 쓴다 (화면에 계통 이름은 띄우지 않는다)
+  const urgency = FAMILIES[PATTERN_FAMILY[verdict.top]].urgency;
 
-  /*
-    계통 확률은 합이 1이라 50% 넘는 계통이 구조적으로 하나뿐이다 — 그 컷은 판정 헤드라인을
-    반복할 뿐이다. 실측(이력 316건)에서 눈에 걸리는 0~2% 잡음은 3위 아래에 몰려 있고,
-    2위는 20~35%까지 올라간다(Edge-Loc ↔ Loc처럼 8×8에서 안 갈리는 쌍). 그래서 순위가 아니라
-    5% 바닥으로 자른다. 1위는 값에 상관없이 항상 남긴다.
-  */
   const [driversOpen, setDriversOpen] = useState(false);
 
   /*
@@ -61,9 +49,6 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
     있으면 정작 드물게 뜨는 진짜 사유('판정이 갈림' 등)가 같은 크기로 묻힌다.
   */
   const [reviewOpen, setReviewOpen] = useState(false);
-
-  const shownFamilies = verdict.familyScores.filter((s, i) => i === 0 || s.probability >= FAMILY_FLOOR_PCT / 100);
-  const hiddenFamilies = verdict.familyScores.length - shownFamilies.length;
 
   return (
     <div className="stack">
@@ -123,13 +108,16 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         */
         sub={`${verdict.engine === 'rule-mock' ? '규칙 기반 대체 (학습 모델 미연결) · ' : ''}추론 ${verdict.inferMs.toFixed(1)} ms`}
       >
+        {/*
+          헤드라인은 모델 9클래스 1순위 그대로다. 계통(9클래스를 묶은 합산)은 1순위와 다른
+          이름을 띄울 수 있어 혼동을 주므로 판정 카드에서 뺐다.
+        */}
         <div className="verdict-head">
-          <span className="verdict-class">{family.label}</span>
-          <span className="verdict-prob">{pct(top.probability)}</span>
-          <Badge color={URGENCY_COLOR[family.urgency]} strong>
-            {URGENCY_LABEL[family.urgency]}
+          <span className="verdict-class">{PATTERN_LABEL[verdict.top]}</span>
+          <span className="verdict-prob">{pct(verdict.topScore)}</span>
+          <Badge color={URGENCY_COLOR[urgency]} strong>
+            {URGENCY_LABEL[urgency]}
           </Badge>
-          <Badge>신뢰도 {CONFIDENCE_COPY[band].label}</Badge>
           {SHOW_REVIEW_STATUS &&
             (verdict.review.required ? (
               <Badge color="--warning" strong>검토 필요</Badge>
@@ -138,49 +126,9 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
             ))}
         </div>
 
-        <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
-          모델 1순위: {PATTERN_LABEL[verdict.top]} {pct(verdict.topScore)}
-          {SHOW_REVIEW_STATUS && verdict.review.note && ` · ${verdict.review.note}`}
-        </p>
-
-        <p className="section-note" style={{ marginTop: 8 }}>
-          {family.meaning}
-        </p>
-        <p className="section-note" style={{ marginTop: 4, color: 'var(--text-muted)' }}>
-          판별 근거: {family.discriminator}
-        </p>
-
-        <div className="divider" style={{ margin: '12px 0' }} />
-
-        <div className="card-sub" style={{ marginBottom: 6 }}>계통별 확률</div>
-        <ProbabilityBars
-          rows={shownFamilies.map((s) => ({
-            id: s.id,
-            label: FAMILIES[s.id].short,
-            probability: s.probability,
-          }))}
-          topId={verdict.family}
-        />
-        {hiddenFamilies > 0 && (
-          <p className="section-note" style={{ marginTop: 6, color: 'var(--text-muted)' }}>
-            나머지 {hiddenFamilies}계통은 {FAMILY_FLOOR_PCT}% 미만이라 접었다. 계통 확률은 9클래스를 묶은 값이라 보이는
-            막대만 더하면 100%가 되지 않는다.
-          </p>
-        )}
-
-        {/*
-          신뢰도 문구는 경고가 아니라 진행 안내다("아래 공정 순서대로 진행하면 된다").
-          그걸 매번 박스에 넣으면 잘 나온 판정까지 주의 문구가 붙은 것처럼 보인다.
-          단정하지 말라고 말해야 하는 '낮음'일 때만 박스로 세우고, 나머지는 한 줄로 둔다.
-        */}
-        {band === 'low' ? (
-          <div className="banner warn" style={{ marginTop: 12 }}>
-            <span className="caveat-icon" aria-hidden>!</span>
-            <div>{CONFIDENCE_COPY[band].note}</div>
-          </div>
-        ) : (
-          <p className="section-note" style={{ marginTop: 12, color: 'var(--text-muted)' }}>
-            {CONFIDENCE_COPY[band].note}
+        {SHOW_REVIEW_STATUS && verdict.review.note && (
+          <p className="section-note" style={{ marginTop: 8, color: 'var(--text-muted)' }}>
+            {verdict.review.note}
           </p>
         )}
       </Card>
@@ -295,7 +243,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         title="불량 유형 확률"
         sub={
           verdict.model
-            ? '모델 원본 확률의 상위 3순위. 위의 계통 확률은 9클래스 전체를 묶은 것이라 합이 보존된다.'
+            ? '모델 원본 확률의 상위 3순위.'
             : '규칙 대체판이 만든 확률의 상위 3순위. 학습된 모델이 아니라 UI를 돌리기 위한 임시 값이다.'
         }
       >
