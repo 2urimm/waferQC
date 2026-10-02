@@ -1,5 +1,5 @@
 import { REVIEW_REASON_COPY, SHOW_REVIEW_STATUS } from '../config/model';
-import { CONFIDENCE_COPY, FAMILIES, confidenceBand, unresolvedPairsFor } from '../config/taxonomy';
+import { UNRESOLVED_PAIRS } from '../config/taxonomy';
 import { CASE_STATUS_LABEL, explainStatus } from '../domain/caseStatus';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { DiagnosisPlan } from '../domain/plan';
@@ -32,11 +32,6 @@ const dt = (t: number) =>
 
 export function generateReport({ inspection, plan, processLimit = 4 }: ReportOptions): GeneratedReport {
   const { verdict } = inspection;
-  const family = FAMILIES[verdict.family];
-  const top = verdict.familyScores[0];
-  const second = verdict.familyScores[1];
-  const band = confidenceBand(top.probability, second?.probability ?? 0);
-
   const tabs = plan.tabs.slice(0, processLimit);
 
   const L: string[] = [];
@@ -69,32 +64,17 @@ export function generateReport({ inspection, plan, processLimit = 4 }: ReportOpt
   /* ── 판정 ── */
   L.push(`## 1. 판정`);
   L.push('');
-  L.push(`**${family.label}** — 확률 ${pct(top.probability)}, 신뢰도 ${CONFIDENCE_COPY[band].label}`);
-  L.push('');
   L.push(
-    `모델 1순위 클래스: ${PATTERN_LABEL[verdict.top]} ${pct(verdict.topScore)}` +
+    `**${PATTERN_LABEL[verdict.top]}** — 확률 ${pct(verdict.topScore)}` +
       (SHOW_REVIEW_STATUS ? (verdict.review.required ? ' · **검토 필요**' : ' · 자동 채택 가능') : ''),
   );
-  L.push('');
-  L.push(`- 판별 근거: ${family.discriminator}`);
-  L.push(`- 의미: ${family.meaning}`);
-  L.push(`- ${CONFIDENCE_COPY[band].note}`);
-  L.push('');
-
-  L.push(`### 계통별 확률`);
-  L.push('');
-  L.push(`| 계통 | 확률 |`);
-  L.push(`| --- | ---: |`);
-  for (const s of verdict.familyScores) {
-    L.push(`| ${FAMILIES[s.id].label} | ${pct(s.probability)} |`);
-  }
   L.push('');
 
   /* ── 9클래스 확률 ── */
   L.push(`### 9클래스 확률`);
   L.push('');
   L.push(
-    `모델이 내는 원본 확률이다. 위의 계통 확률은 이걸 묶은 것이라 합이 보존된다. ` +
+    `모델이 내는 원본 확률이다. ` +
       `8×8 해상도에서는 인접 클래스끼리 확률이 새므로, 세부 클래스는 확정이 아니라 점검 범위를 좁히는 순위로 읽을 것.`,
   );
   L.push('');
@@ -118,7 +98,8 @@ export function generateReport({ inspection, plan, processLimit = 4 }: ReportOpt
   L.push('');
 
   /* ── 한계 ── */
-  const pairs = unresolvedPairsFor(verdict.family);
+  // 1순위 클래스가 낀 미분리 쌍만 싣는다
+  const pairs = UNRESOLVED_PAIRS.filter((p) => p.pair.includes(verdict.top));
   if (verdict.caveats.length || pairs.length) {
     L.push(`## 3. 이 판정의 한계`);
     L.push('');
@@ -200,6 +181,6 @@ export function generateReport({ inspection, plan, processLimit = 4 }: ReportOpt
 
   return {
     markdown: L.join('\n'),
-    title: `${inspection.lotId}_W${inspection.waferNo}_${family.short}_점검보고서`,
+    title: `${inspection.lotId}_W${inspection.waferNo}_${verdict.top}_점검보고서`,
   };
 }

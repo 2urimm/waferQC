@@ -4,7 +4,7 @@ import type { Inspection } from '../domain/types';
 import { generateReport } from '../services/report';
 import { MarkdownView } from './MarkdownView';
 import { ReportPngButton } from './ReportPngButton';
-import { FAMILIES } from '../config/taxonomy';
+import { PATTERN_LABEL } from '../domain/causes';
 import { Badge, Card } from './ui';
 
 /**
@@ -81,8 +81,8 @@ export function ReportPanel({ inspection, plan }: { inspection: Inspection; plan
       }
     >
       <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-        <Badge color={inspection.verdict.family === 'NORMAL' ? '--good' : '--serious'} strong>
-          {FAMILIES[inspection.verdict.family].short}
+        <Badge color={inspection.verdict.top === 'None' ? '--good' : '--serious'} strong>
+          {PATTERN_LABEL[inspection.verdict.top]}
         </Badge>
         {inspection.caseId && <Badge>대응 Log {inspection.caseId}</Badge>}
         <Badge>{report.markdown.split('\n').length}줄</Badge>

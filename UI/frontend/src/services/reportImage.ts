@@ -6,7 +6,6 @@ import {
   REVIEW_REASON_COPY,
   SHOW_REVIEW_STATUS,
 } from '../config/model';
-import { CONFIDENCE_COPY, FAMILIES, confidenceBand } from '../config/taxonomy';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { DiagnosisPlan } from '../domain/plan';
 import type { Inspection } from '../domain/types';
@@ -150,9 +149,6 @@ export async function renderReportPng(opts: ReportImageOptions): Promise<Rendere
 
 function draw({ inspection, plan, processLimit = 3 }: ReportImageOptions, canvasHeight: number) {
   const { verdict } = inspection;
-  const family = FAMILIES[verdict.family];
-  const top = verdict.familyScores[0];
-  const band = confidenceBand(top.probability, verdict.familyScores[1]?.probability ?? 0);
 
   // 배율은 2배로 고정한다. devicePixelRatio를 쓰면 보는 화면에 따라 저장 해상도가
   // 달라져서, 같은 보고서인데 어떤 노트북에서는 흐릿하게 나온다. 출력·공유용이므로
@@ -222,43 +218,29 @@ function draw({ inspection, plan, processLimit = 3 }: ReportImageOptions, canvas
 
   // 오른쪽: 판정
   const rx = PAD + mapSize + 40;
-  const rw = W - PAD - rx;
   let ry = mapTop + 24;
 
   g.font = font(34, 600);
   g.fillStyle = C.ink;
-  g.fillText(family.label, rx, ry);
-  const famW = g.measureText(family.label).width;
+  const topLabel = PATTERN_LABEL[verdict.top];
+  g.fillText(topLabel, rx, ry);
+  const topW = g.measureText(topLabel).width;
   g.font = font(17);
   g.fillStyle = C.ink2;
-  g.fillText(pct(top.probability), rx + famW + 12, ry);
+  g.fillText(pct(verdict.topScore), rx + topW + 12, ry);
 
-  ry += 26;
-  let bx = rx;
-  bx = badge(g, `신뢰도 ${CONFIDENCE_COPY[band].label}`, bx, ry, C.deemph);
   if (SHOW_REVIEW_STATUS) {
+    ry += 26;
     badge(
       g,
       verdict.review.required ? '검토 필요' : '자동 채택 가능',
-      bx,
+      rx,
       ry,
       verdict.review.required ? C.warning : C.good,
       true,
     );
   }
-
-  ry += 26;
-  g.font = font(13);
-  g.fillStyle = C.ink2;
-  g.fillText(`모델 1순위: ${PATTERN_LABEL[verdict.top]} ${pct(verdict.topScore)}`, rx, ry);
-
-  ry += 22;
-  g.font = font(12.5);
-  for (const ln of wrap(g, family.meaning, rw)) {
-    g.fillStyle = C.muted;
-    g.fillText(ln, rx, ry);
-    ry += 18;
-  }
+  ry += 8;
 
   // 범례 baseline 바로 아래에 다음 제목이 붙지 않도록 충분히 띄운다
   c.y = Math.max(ly + 40, ry + 16);
@@ -407,6 +389,6 @@ function draw({ inspection, plan, processLimit = 3 }: ReportImageOptions, canvas
   return {
     canvas,
     height: Math.ceil(c.y + 8),
-    title: `${inspection.lotId}_W${inspection.waferNo}_${family.short}_점검보고서`,
+    title: `${inspection.lotId}_W${inspection.waferNo}_${verdict.top}_점검보고서`,
   };
 }

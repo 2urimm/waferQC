@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FAMILIES, FAMILY_ORDER, type FamilyId } from '../config/taxonomy';
-import { PATTERN_LABEL, causeById } from '../domain/causes';
+import { PATTERN_LABEL, causeById, type DefectPatternId } from '../domain/causes';
 import { CASE_STATUS_SHORT, causeStatus } from '../domain/caseStatus';
 import { buildPlan } from '../domain/plan';
 import { ProcessTabs } from '../components/ProcessTabs';
@@ -12,14 +11,14 @@ import { useApp } from '../state/AppStore';
 
 export function History() {
   const { state, patch, toggleAction, setResolution, reseedHistory } = useApp();
-  const [filter, setFilter] = useState<FamilyId | 'ALL'>('ALL');
+  const [filter, setFilter] = useState<DefectPatternId | 'ALL'>('ALL');
   const [lotQuery, setLotQuery] = useState('');
 
   const rows = useMemo(
     () =>
       state.history.filter(
         (h) =>
-          (filter === 'ALL' || h.verdict.family === filter) &&
+          (filter === 'ALL' || h.verdict.top === filter) &&
           (lotQuery.trim() === '' || h.lotId.toLowerCase().includes(lotQuery.trim().toLowerCase())),
       ),
     [state.history, filter, lotQuery],
@@ -42,12 +41,12 @@ export function History() {
         {/* 필터는 한 줄에 모아 둔다 — 카드마다 흩어 놓지 않는다 */}
         <div className="row" style={{ gap: 8, marginBottom: 12 }}>
           <label className="field" style={{ width: 180 }}>
-            <span>계통</span>
-            <select value={filter} onChange={(e) => setFilter(e.target.value as FamilyId | 'ALL')}>
+            <span>1순위 클래스</span>
+            <select value={filter} onChange={(e) => setFilter(e.target.value as DefectPatternId | 'ALL')}>
               <option value="ALL">전체</option>
-              {FAMILY_ORDER.map((f) => (
-                <option key={f} value={f}>
-                  {FAMILIES[f].label}
+              {(Object.keys(PATTERN_LABEL) as DefectPatternId[]).map((p) => (
+                <option key={p} value={p}>
+                  {PATTERN_LABEL[p]}
                 </option>
               ))}
             </select>
@@ -69,8 +68,7 @@ export function History() {
                   <th>관리번호</th>
                   <th>로트</th>
                   <th className="num">W#</th>
-                  <th>계통</th>
-                  <th>최유력 패턴</th>
+                  <th>1순위 클래스</th>
                   <th className="num">확률</th>
                   <th>상태</th>
                   <th className="num">점검</th>
@@ -97,10 +95,9 @@ export function History() {
                       </td>
                       <td>{h.lotId}</td>
                       <td className="num">{h.waferNo}</td>
-                      <td style={{ fontWeight: h.verdict.family === 'NORMAL' ? 400 : 600 }}>
-                        {FAMILIES[h.verdict.family].short}
+                      <td style={{ fontWeight: top && top.id !== 'None' ? 600 : 400 }}>
+                        {top ? PATTERN_LABEL[top.id] : '—'}
                       </td>
-                      <td>{top ? PATTERN_LABEL[top.id] : '—'}</td>
                       <td className="num">{top ? `${(top.probability * 100).toFixed(0)}%` : '—'}</td>
                       <td>
                         {(() => {
