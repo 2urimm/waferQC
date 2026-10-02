@@ -45,7 +45,6 @@ export const PATTERN_ORDER: DefectPatternId[] = [
 /*
   9클래스는 모델(config.json)이 쓰는 영어 이름을 그대로 화면에 낸다.
   한글로 옮기면 팀이 CLI·엑셀·모델 출력에서 보는 이름과 갈라져 대조가 어려워진다.
-  계통(FAMILIES)은 이 UI가 9클래스를 묶어 만든 것이라 영어 원본이 없어 한글로 둔다.
 */
 export const PATTERN_LABEL: Record<DefectPatternId, string> = {
   Center: 'Center',

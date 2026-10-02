@@ -13,7 +13,7 @@ const URGENCY_COLOR: Record<string, string> = {
   immediate: '--critical',
 };
 
-/** 1순위 클래스별 조치 수준 (예전 계통 기준 값을 클래스에 그대로 옮겼다) */
+/** 1순위 클래스별 조치 수준 */
 const CLASS_URGENCY: Record<DefectPatternId, string> = {
   None: 'none',
   Center: 'investigate',
@@ -119,10 +119,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
         */
         sub={`${verdict.engine === 'rule-mock' ? '규칙 기반 대체 (학습 모델 미연결) · ' : ''}추론 ${verdict.inferMs.toFixed(1)} ms`}
       >
-        {/*
-          헤드라인은 모델 9클래스 1순위 그대로다. 계통(9클래스를 묶은 합산)은 1순위와 다른
-          이름을 띄울 수 있어 혼동을 주므로 판정 카드에서 뺐다.
-        */}
+        {/* 헤드라인은 모델 9클래스 1순위 그대로다. */}
         <div className="verdict-head">
           <span className="verdict-class">{PATTERN_LABEL[verdict.top]}</span>
           <span className="verdict-prob">{pct(verdict.topScore)}</span>
@@ -267,11 +264,7 @@ export function VerdictPanel({ verdict }: { verdict: Verdict }) {
                   {pct(p.probability)}
                 </span>
               </div>
-              {/*
-                막대 길이는 전체 100% 중 이 클래스가 차지하는 몫이다.
-                계통 안에서의 몫(withinFamily)으로 그리면 10%짜리가 꽉 찬 막대로 보여
-                옆의 숫자와 어긋난다.
-              */}
+              {/* 막대 길이는 전체 100% 중 이 클래스가 차지하는 몫이다. */}
               <div className="prob-track" style={{ height: 8, marginTop: 3 }}>
                 <div
                   className="prob-fill top"

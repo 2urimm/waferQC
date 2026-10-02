@@ -177,24 +177,17 @@ wafer_final_package_v2\.venv\Scripts\python.exe serial_bridge.py
 
 ---
 
-## 두 층으로 된 판정
+## 판정
 
 모델은 **9클래스**(Center / Donut / Edge-Loc / Edge-Ring / Loc / Random / Scratch / Near-full / None)를
-출력한다. UI는 그걸 그대로 띄우지 않고 두 층으로 보여준다.
-
-1. **계통** — 9클래스를 6개 계통(Normal / Radial · Center-weighted / Radial · Edge-weighted /
-   Localized / Scattered / Global)으로 묶은 확률. 계통 이름은 모델의 9클래스와 섞이지 않게
-   화면·보고서 모두 영문으로 통일했다 (`config/taxonomy.ts`).
-   8×8에서는 인접 클래스끼리 확률이 새기 때문에 계통 단위가 훨씬 안정적이다.
-2. **9클래스 확률** — 모델 원본. 각 후보에 **어느 피처가 그 순위를 만들었는지** 실제 수치를 인용한 근거를 붙인다.
-
-각 클래스는 정확히 한 계통에만 속하므로 계통 확률은 소속 클래스 확률의 합이고, 합이 보존된다.
+출력한다. UI는 **모델 1순위 클래스를 그대로** 판정 헤드라인으로 띄우고, 이력·보고서도 같은 값을 쓴다.
+그 아래 상위 3순위 확률에 **어느 피처가 그 순위를 만들었는지** 실제 수치를 인용한 근거를 붙인다.
 
 ### 못 하는 것을 못 한다고 말한다
 
 8×8에서 구조적으로 갈리지 않는 쌍(Center↔Donut, Donut↔Edge-Ring, Loc↔Scratch, Edge-Loc↔Edge-Ring)은
 숨기지 않는다. 어느 쌍이 왜 안 갈리는지는 점검 보고서 §3 **"이 판정의 한계"**에 근거와 함께
-적힌다 (`config/taxonomy.ts`의 `UNRESOLVED_PAIRS`). 화면에서는 검토 사유 **"구조적으로 모호한
+적힌다 (`config/unresolvedPairs.ts`의 `UNRESOLVED_PAIRS`). 화면에서는 검토 사유 **"구조적으로 모호한
 클래스"**로 뜨는데, 지금은 검토 표시를 꺼 둬서(아래) 보고서 쪽에만 남는다. 대신 그 둘을
 가르는 데 쓰이는 연속 수치(군집 이방성, 외곽 각도 분산)는 `판정 근거` 표에 항상 실려
 엔지니어가 직접 읽는다.
@@ -255,21 +248,6 @@ UI와 모델이 맞춰야 하는 것들. 출처는 `ConvNeXt_CNN.ipynb`가 내�
 | `WaferCNNV2` (primary) | 9클래스 최종 예측 |
 | `WaferHierarchicalCNNV3` (auxiliary) | 검토 판단 보조, 이진(정상/불량) 임계 보유. **화면에는 표시하지 않는다** — 판정은 주 모델 하나로 읽고, 두 모델이 갈린 사실은 검토 사유에만 남는다 |
 
-### 계통 매핑
-
-각 클래스는 **정확히 한 계통에만** 속한다 — 겹치면 계통 확률의 합이 1을 넘는다.
-
-| 계통 | 클래스 |
-| --- | --- |
-| NORMAL — Normal | None |
-| RADIAL_INNER — Radial · Center-weighted (`Inner`) | Center, Donut |
-| RADIAL_OUTER — Radial · Edge-weighted (`Edge`) | Edge-Ring, Edge-Loc |
-| LOCAL — Localized (`Local`) | Loc, Scratch |
-| SCATTER — Scattered (`Scatter`) | Random |
-| GLOBAL — Global (`Global`) | Near-full |
-
-화면·보고서에 뜨는 이름이 이 영문 라벨이다. 괄호 안은 배지·목록에 쓰는 짧은 이름.
-
 ### 검토 정책 값
 
 | 상수 | 값 | 뜻 |
@@ -325,7 +303,7 @@ POST {baseUrl}/predict
 ```
 
 `probabilities`는 **9개 전부** 내려주는 게 좋다. `top_predictions`만 오면 나머지 클래스가 0으로
-채워져 계통 합이 실제보다 낮게 나온다. CORS도 열어야 한다.
+채워져 확률 합이 1보다 낮게 나온다. CORS도 열어야 한다.
 
 서버를 바꿔 끼우는 자리는 `services/inference.ts`의 `HttpInferenceEngine` 하나다.
 
@@ -341,7 +319,6 @@ setInferenceEngine(new HttpInferenceEngine('http://<서버>:<포트>'));
 - 공간 통계 (반경 무게중심 · 반경 프로파일 · 군집 · 이방성 · 각도 분산 · 방위)
 - 판정 근거 목록과 그 설명
 - 저해상도 한계 (미분리 쌍)
-- 계통 집계
 - 공정별 점검 계획
 
 ---
@@ -431,7 +408,7 @@ UI/
       config/
         hardware.ts    8×8 격자 상수 · 원형 마스크 판정
         model.ts       ★ 모델 계약 — 9클래스 순서, 셀 값, 검토 정책
-        taxonomy.ts    계통 체계, 미분리 쌍과 그 근거
+        unresolvedPairs.ts  미분리 쌍과 그 근거
       domain/
         types.ts       공용 타입
         features.ts    8×8 → 공간 통계 (반경·군집·이방성·방위)
@@ -499,7 +476,7 @@ updateInspection(id, patch)      → PATCH /inspections/:id
 
 ## 판정 규칙을 고칠 때
 
-`npm run verify`가 프리셋 9종의 계통·1순위 클래스를 회귀 기준선과 대조한다. 판정 규칙
+`npm run verify`가 프리셋 9종의 1순위 클래스를 회귀 기준선과 대조한다. 판정 규칙
 (`classify.ts`), 피처(`features.ts`), 계획(`plan.ts`)을 건드렸으면 반드시 돌릴 것.
 기준선이 깨지면 **고친 게 맞는지 기준선이 틀렸는지를 먼저 판단하고** 둘 중 하나를 고칠 것.
 

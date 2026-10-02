@@ -1,5 +1,5 @@
 import { REVIEW_REASON_COPY, SHOW_REVIEW_STATUS } from '../config/model';
-import { UNRESOLVED_PAIRS } from '../config/taxonomy';
+import { UNRESOLVED_PAIRS } from '../config/unresolvedPairs';
 import { CASE_STATUS_LABEL, explainStatus } from '../domain/caseStatus';
 import { PATTERN_LABEL } from '../domain/causes';
 import type { DiagnosisPlan } from '../domain/plan';

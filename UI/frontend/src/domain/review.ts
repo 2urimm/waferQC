@@ -65,7 +65,7 @@ export function decideReview(
   };
 }
 
-/** 저해상도에서 서로 새는 쌍. config/taxonomy.ts의 UNRESOLVED_PAIRS와 같은 근거다. */
+/** 저해상도에서 서로 새는 쌍. config/unresolvedPairs.ts의 UNRESOLVED_PAIRS와 같은 근거다. */
 const AMBIGUOUS_PAIRS: Array<[DefectPatternId, DefectPatternId]> = [
   ['Center', 'Donut'],
   ['Donut', 'Edge-Ring'],

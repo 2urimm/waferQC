@@ -13,7 +13,7 @@ import type { Verdict, WaferMap } from '../domain/types';
  *
  * 인터페이스가 Verdict를 통째로 돌려주게 되어 있는 건 의도적이다.
  * 확률만 받아오면 "왜 그렇게 판정했는지"를 UI가 다시 지어내야 하는데, 그러면 모델과
- * 설명이 어긋난다. 다만 근거(drivers)·한계(caveats)·계통 집계는 순수하게 피처에서
+ * 설명이 어긋난다. 다만 근거(drivers)·한계(caveats)는 순수하게 피처에서
  * 나오는 것이라 UI 쪽에서 계산해도 모델과 어긋나지 않는다 — 그래서
  * `verdictFromProbabilities()`가 9클래스 확률만 받아 나머지를 채운다.
  * ──────────────────────────────────────────────────────────────────────────── */
@@ -74,7 +74,7 @@ export interface PredictResponse {
  *
  * 판정·검토 여부는 전부 서버 값을 그대로 쓴다. UI가 다시 계산하지 않는다 —
  * 모델 정책(클래스별 임계, V3 대조)이 UI 규칙보다 정본이고, 두 곳에서 따로 계산하면
- * 언젠가 어긋난다. UI가 채우는 건 피처·근거·계통 집계처럼 맵에서 순수하게 나오는 것뿐이다.
+ * 언젠가 어긋난다. UI가 채우는 건 피처·근거처럼 맵에서 순수하게 나오는 것뿐이다.
  */
 export class HttpInferenceEngine implements InferenceEngine {
   readonly kind = 'http' as const;
@@ -137,7 +137,7 @@ function toProbabilityVector(data: PredictResponse): number[] {
   if (data.probabilities?.length === CLASS_NAMES.length) return data.probabilities;
 
   // serve.py가 probabilities를 안 실어 준 경우의 폴백.
-  // top_predictions만 있으면 빠진 클래스는 0이 되어 계통 합이 실제보다 낮아진다.
+  // top_predictions만 있으면 빠진 클래스는 0이 되어 확률 합이 1보다 낮아진다.
   const v = new Array(CLASS_NAMES.length).fill(0);
   for (const t of data.top_predictions ?? []) {
     const i = CLASS_NAMES.indexOf(t.class);

@@ -8,7 +8,6 @@
  * 기준선이 틀렸는지를 먼저 판단하고 나서 둘 중 하나를 고칠 것.
  */
 import { REVIEW_REASON_COPY } from '../src/config/model';
-import { FAMILIES } from '../src/config/taxonomy';
 import { classify } from '../src/domain/classify';
 import { PATTERN_LABEL, PROCESSES } from '../src/domain/causes';
 import { extractFeatures } from '../src/domain/features';
@@ -19,17 +18,17 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 
 let failures = 0;
 
-/** 프리셋별로 기대하는 계통 / 1순위 클래스 */
-const EXPECTED: Record<string, { family: string[]; top?: string[] }> = {
-  normal: { family: ['NORMAL'], top: ['None'] },
-  center: { family: ['RADIAL_INNER'], top: ['Center'] },
-  donut: { family: ['RADIAL_INNER', 'RADIAL_OUTER'], top: ['Donut', 'Center', 'Edge-Ring'] },
-  'edge-ring': { family: ['RADIAL_OUTER'], top: ['Edge-Ring'] },
-  'edge-loc': { family: ['RADIAL_OUTER', 'LOCAL'], top: ['Edge-Loc', 'Loc'] },
-  loc: { family: ['LOCAL'], top: ['Loc'] },
-  scratch: { family: ['LOCAL'], top: ['Scratch', 'Loc'] },
-  random: { family: ['SCATTER'], top: ['Random'] },
-  'near-full': { family: ['GLOBAL'], top: ['Near-full'] },
+/** 프리셋별로 기대하는 1순위 클래스 */
+const EXPECTED: Record<string, string[]> = {
+  normal: ['None'],
+  center: ['Center'],
+  donut: ['Donut', 'Center', 'Edge-Ring'],
+  'edge-ring': ['Edge-Ring'],
+  'edge-loc': ['Edge-Loc', 'Loc'],
+  loc: ['Loc'],
+  scratch: ['Scratch', 'Loc'],
+  random: ['Random'],
+  'near-full': ['Near-full'],
 };
 
 for (const preset of PATTERN_PRESETS) {
@@ -39,21 +38,12 @@ for (const preset of PATTERN_PRESETS) {
   const plan = buildPlan(v);
 
   const exp = EXPECTED[preset.id];
-  const famOk = !exp || exp.family.includes(v.family);
-  const topOk = !exp?.top || exp.top.includes(v.top);
-  const ok = famOk && topOk;
+  const ok = !exp || exp.includes(v.top);
   if (!ok) failures++;
 
   console.log(`\n${ok ? '  OK ' : 'FAIL '}${preset.label}  (${preset.id})`);
-  console.log(
-    `      계통  ${FAMILIES[v.family].label} ${pct(v.familyScores[0].probability)}` +
-      `   (2위 ${FAMILIES[v.familyScores[1].id].short} ${pct(v.familyScores[1].probability)})`,
-  );
   console.log(`      1순위 ${PATTERN_LABEL[v.top]} (${v.top}) ${pct(v.topScore)}`);
-  if (!ok) {
-    if (!famOk) console.log(`      기대 계통  ${exp!.family.join(' 또는 ')}`);
-    if (!topOk) console.log(`      기대 1순위 ${exp!.top!.join(' 또는 ')}`);
-  }
+  if (!ok) console.log(`      기대 1순위 ${exp!.join(' 또는 ')}`);
   console.log(
     `      상위3 ${v.patterns
       .slice(0, 3)

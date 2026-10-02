@@ -61,7 +61,7 @@ export const PATTERN_PRESETS: PatternPreset[] = [
   {
     id: 'normal',
     label: 'None',
-    intent: '배경 산발만. 계통 패턴이 안 잡히는지 확인.',
+    intent: '배경 산발만. 구조 패턴이 안 잡히는지 확인.',
     build: (seed) => speckle(blankWafer(), mulberry32(seed), 0.02),
   },
   {

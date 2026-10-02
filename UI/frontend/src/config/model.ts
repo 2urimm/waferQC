@@ -1,5 +1,4 @@
 import type { DefectPatternId } from '../domain/causes';
-import type { FamilyId } from './taxonomy';
 
 /**
  * 모델 계약.
@@ -63,26 +62,6 @@ export const CLASS_NAMES: DefectPatternId[] = [
 
 export const PRIMARY_MODEL = 'WaferCNNV2';
 export const AUXILIARY_MODEL = 'WaferHierarchicalCNNV3';
-
-/**
- * 9클래스 → 계통.
- *
- * 모델은 9클래스를 직접 낸다. UI는 그걸 계통으로 묶어 헤드라인을 만들고,
- * 그 아래에 세부 후보를 확률과 함께 편다. 묶는 이유는 8x8에서 인접 클래스의
- * 확률이 서로 새기 때문이다 — 계통 단위 확률이 개별 클래스 확률보다 훨씬 안정적이다.
- * 각 클래스는 정확히 한 계통에만 속한다 (확률 합이 보존되어야 하므로).
- */
-export const PATTERN_FAMILY: Record<DefectPatternId, FamilyId> = {
-  None: 'NORMAL',
-  Center: 'RADIAL_INNER',
-  Donut: 'RADIAL_INNER',
-  'Edge-Ring': 'RADIAL_OUTER',
-  'Edge-Loc': 'RADIAL_OUTER',
-  Loc: 'LOCAL',
-  Scratch: 'LOCAL',
-  Random: 'SCATTER',
-  'Near-full': 'GLOBAL',
-};
 
 /* ── 검토(review) 정책 ───────────────────────────────────────────────────── */
 
@@ -193,7 +172,7 @@ export const REVIEW_REASON_COPY: Record<ReviewReason, { label: string; detail: s
   },
   structurally_ambiguous_class: {
     label: '구조적으로 모호한 클래스',
-    detail: '8×8 해상도에서 인접 클래스와 갈리지 않는 구간이다. 계통까지만 신뢰하고 세부 클래스는 후보로 볼 것.',
+    detail: '8×8 해상도에서 인접 클래스와 갈리지 않는 구간이다. 1순위와 짝 클래스를 함께 후보로 볼 것.',
   },
   extreme_defect_density: {
     label: '정상 판정인데 불량 밀도가 높음',

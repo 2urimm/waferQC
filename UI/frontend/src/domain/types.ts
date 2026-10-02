@@ -1,5 +1,4 @@
 import type { CellState, ReviewReason } from '../config/model';
-import type { FamilyId } from '../config/taxonomy';
 import type { DefectPatternId } from './causes';
 
 /**
@@ -46,19 +45,11 @@ export interface WaferFeatures {
   edgeDominantClock: number;
 }
 
-export interface FamilyScore {
-  id: FamilyId;
-  /** 이 계통에 속한 클래스 확률의 합 */
-  probability: number;
-}
-
 /** 모델이 내는 9클래스 중 하나 */
 export interface PatternCandidate {
   id: DefectPatternId;
   /** 모델 확률 (9클래스 softmax) */
   probability: number;
-  /** 소속 계통 안에서의 상대 비중 */
-  withinFamily: number;
   /** 왜 이 순위인지 — 실제 피처 값을 인용한다 */
   reason: string;
 }
@@ -77,9 +68,6 @@ export interface Verdict {
   topScore: number;
   /** 9클래스 전체 확률 */
   patterns: PatternCandidate[];
-  /** 계통으로 묶은 확률 (UI 헤드라인) */
-  family: FamilyId;
-  familyScores: FamilyScore[];
   /** 사람 검토 여부 */
   review: ReviewDecision;
   features: WaferFeatures;

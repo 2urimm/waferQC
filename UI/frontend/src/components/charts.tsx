@@ -276,39 +276,6 @@ export function ColumnChart({ bars, height = 160, format, ariaLabel, tableHead =
   );
 }
 
-/** 클래스 확률 — 가로 막대. 판정된 클래스만 강조하고 나머지는 비강조 회색. */
-export function ProbabilityBars({
-  rows,
-  topId,
-}: {
-  rows: Array<{ id: string; label: string; probability: number }>;
-  topId: string;
-}) {
-  return (
-    <div role="table" aria-label="계통별 확률">
-      {rows.map((r) => {
-        const isTop = r.id === topId;
-        return (
-          <div className="prob-row" key={r.id} role="row">
-            <span className={`prob-label${isTop ? ' top' : ''}`} role="cell">
-              {r.label}
-            </span>
-            <span className="prob-track" role="cell">
-              <span
-                className={`prob-fill${isTop ? ' top' : ''}`}
-                style={{ width: `${Math.max(1, r.probability * 100)}%` }}
-              />
-            </span>
-            <span className="prob-value" role="cell">
-              {(r.probability * 100).toFixed(0)}%
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function TableView({ head, rows }: { head: [string, string]; rows: Array<[string, string]> }) {
   return (
     <details style={{ marginTop: 8 }}>

@@ -10,7 +10,6 @@
  * `python app.py --manual` 결과와 같아야 한다 — 다르면 UI가 잘못 보내고 있는 것이다.
  */
 import { CLASS_NAMES } from '../src/config/model';
-import { FAMILIES } from '../src/config/taxonomy';
 import { PATTERN_LABEL } from '../src/domain/causes';
 import { README_EXAMPLES } from '../src/domain/patterns';
 import { buildPlan } from '../src/domain/plan';
@@ -49,12 +48,6 @@ const fail = (m: string) => {
       fail(`${ex.label}: 확률 합이 ${sum.toFixed(3)} — 9개를 다 못 받았을 수 있다`);
     }
 
-    // 계통 확률 합도 보존돼야 한다
-    const famSum = v.familyScores.reduce((s, f) => s + f.probability, 0);
-    if (Math.abs(famSum - sum) > 1e-6) {
-      fail(`${ex.label}: 계통 합(${famSum.toFixed(3)})이 클래스 합(${sum.toFixed(3)})과 다르다`);
-    }
-
     // 서버 status와 UI의 검토 판단이 어긋나면 안 된다
     const uiReview = v.review.required;
     const serverReview = v.model.status === 'REVIEW';
@@ -74,8 +67,7 @@ const fail = (m: string) => {
         `  임계 ${v.model.classThreshold.toFixed(2)}  불량 ${v.model.defectCellCount}칸${dir}${reasons}`,
     );
     console.log(
-      `      계통 ${FAMILIES[v.family].label} ${pct(v.familyScores[0].probability)}` +
-        `  ·  공정 ${plan.tabs.length ? plan.tabs.slice(0, 3).map((t) => t.meta.short).join(' → ') : '(매핑 없음)'}` +
+      `      공정 ${plan.tabs.length ? plan.tabs.slice(0, 3).map((t) => t.meta.short).join(' → ') : '(매핑 없음)'}` +
         `  ·  추론 ${v.inferMs.toFixed(0)}ms`,
     );
   }
